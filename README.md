@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# שותפים
 
-## Getting Started
+מערכת משולבת: אתר תדמית + אינדקס ציבורי ואזור אישי מוגן — בפרויקט Next.js אחד, עם CMS מובנה לניהול תוכן.
 
-First, run the development server:
+## סטאק
+
+| שכבה        | טכנולוגיה                                      |
+| ----------- | --------------------------------------------- |
+| Framework   | Next.js 16 (App Router, TypeScript)           |
+| עיצוב       | Tailwind CSS v4, RTL, פונטים Assistant + Heebo |
+| CMS         | Payload 3 (פאנל ניהול ב-`/admin`)              |
+| בסיס נתונים | PostgreSQL (Neon) — schema `public` ל-Prisma, `payload` ל-CMS |
+| ORM         | Prisma 6 (אפליקציה) · Drizzle דרך Payload (CMS) |
+| אימות       | Auth.js v5 (NextAuth) + Prisma Adapter        |
+| Deploy      | Vercel (מתוכנן)                               |
+
+## דרישות מקדימות — חשוב
+
+- **Node.js 20.18.3 בדיוק** (`nvm install 20.18.3 && nvm alias default 20.18.3`).
+  לא גרסה חדשה יותר: ה-CLI של Payload נשבר על Node ≥ 20.19.
+- **npm** (לא pnpm — pnpm 11 דורש Node ≥ 22.13 שמתנגש עם Payload).
+- חשבון Neon (מסלול חינם).
+
+## התקנה
+
+```bash
+npm install
+cp .env.example .env
+```
+
+מלא ב-`.env`:
+
+1. `DATABASE_URL` + `DIRECT_URL` — מ-Neon (pooler / חיבור ישיר).
+2. `AUTH_SECRET`, `PAYLOAD_SECRET` — כבר נוצרו. חדש: `openssl rand -base64 33`
+3. ספק כניסה אחד (אופציונלי כרגע): `AUTH_GOOGLE_ID`+`AUTH_GOOGLE_SECRET` או `AUTH_RESEND_KEY`+`EMAIL_FROM`.
+
+הפעלה:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- אתר: http://localhost:3000
+- פאנל ניהול: http://localhost:3000/admin — בכניסה ראשונה יוצרים משתמש CMS.
+- זריעת תוכן ברירת מחדל (לוגו + הגדרות + תפריט): פתח `http://localhost:3000/dev/seed` פעם אחת.
+- סטייל גайד: http://localhost:3000/style-guide
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> ה-Payload מריץ `push` אוטומטי לסכמת ה-DB בכל הרצת `npm run dev` (סביבת פיתוח).
+> המיגרציה של Prisma: `npm run db:migrate`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## סקריפטים
 
-## Learn More
+| פקודה              | פעולה                                  |
+| ------------------ | -------------------------------------- |
+| `npm run dev`      | שרת פיתוח (+ Payload)                  |
+| `npm run build`    | בילד לפרודקשן                          |
+| `npm run typecheck`| בדיקת טיפוסים                          |
+| `npm run lint`     | ESLint                                 |
+| `npm run format`   | Prettier                              |
+| `npm run db:migrate` | מיגרציית Prisma (פיתוח)              |
+| `npm run db:studio`| Prisma Studio                         |
 
-To learn more about Next.js, take a look at the following resources:
+## מבנה
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/
+    (frontend)/            # root layout: <html dir="rtl" lang="he">, פונטים
+      (marketing)/         # ציבורי — בית, /explore, /guides, ... (revalidate 60ש')
+      (app)/               # מוגן — /dashboard
+      (auth)/sign-in/
+      style-guide/         # רפרנס עיצוב פנימי
+      dev/seed/            # route זריעה (פיתוח בלבד)
+    (payload)/             # פאנל הניהול /admin + API של Payload (root layout נפרד)
+    api/auth/[...nextauth]/
+  payload.config.ts        # קונפיגורציית Payload
+  collections/             # Media, Users (משתמשי CMS), Posts, Guides
+  globals/                 # SiteSettings, MainNavigation
+  payload-types.ts         # טיפוסים — מתוחזק ידנית (ה-CLI שבור, ראה למטה)
+  components/
+    ui/                    # Button, Container
+    marketing/             # SiteHeader, SiteFooter, SiteNav, Logo, ...
+  lib/
+    cms.ts                 # getShellData() — קריאת המעטפת מ-CMS + ברירות מחדל
+    cms-defaults.ts        # ברירות מחדל + ערכי seed
+    payload.ts, prisma.ts, auth-helpers.ts, cn.ts
+  seed/                    # seed.ts + default-logo.jpeg
+prisma/schema.prisma       # User/Account/Session/VerificationToken + Role
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### ניהול תוכן המעטפת
 
-## Deploy on Vercel
+הכל דרך `/admin` → "עיצוב האתר":
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **הגדרות אתר** — לוגו (ניתן להחלפה), שם אתר, קישורי כניסה/הרשמה/איזור-אישי + הטקסטים שלהם, עמודות ה-footer, ניוזלטר, קישורים משפטיים.
+- **תפריט ניווט ראשי** — הוספה/הסרה/סידור מחדש של פריטים, כולל תפריטים נפתחים.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+הרכיבים `SiteHeader`/`SiteFooter` קוראים מ-`getShellData()`; אם ה-CMS ריק — נופלים לברירות המחדל ב-`src/lib/cms-defaults.ts`.
+
+### הגנת נתיבים
+
+1. `src/proxy.ts` — בדיקה אופטימית לפי עוגיית session (`/admin` ו-`/api` פטורים).
+2. `src/app/(frontend)/(app)/layout.tsx` — אימות אמיתי מול ה-DB דרך `auth()`.
+
+## מגבלות ידועות / חוב טכני
+
+- **ה-CLI של Payload שבור** על Node מודרני (`payload generate:types` וכו' → `ERR_REQUIRE_ESM`).
+  עוקפים: `next dev` טוען את הקונפיג דרך Turbopack ומריץ push + מייצר importMap;
+  `src/payload-types.ts` מתוחזק ידנית. לבדוק שוב כשתצא גרסה מתוקנת.
+- ISR של 60ש' על המעטפת — שינוי ב-CMS מופיע תוך דקה. אפשר לשדרג ל-on-demand
+  revalidation דרך hook ב-Payload (חסום כרגע ע"י שינויי caching ב-Next 16).
+- אחסון קבצים: מקומי (`media/`). בפרודקשן — לעבור ל-S3/R2.
+- אזהרת SSL של `pg` (`sslmode=require`) — לא חוסם, deprecation לגרסה עתידית.
+
+## שלבים הבאים
+
+- מעבר עמוד-עמוד על עץ האתר (בית → how-it-works → solutions → ...).
+- מודל הנתונים העסקי (קמפיינים, אבני דרך) — שלב נפרד.
+- שכבת הכספים (Escrow/PSP/ledger) — שלב אחרון.

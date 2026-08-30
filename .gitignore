@@ -30,8 +30,19 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# prisma
+/prisma/*.db
+/prisma/migrations/dev.db*
+
+# editor / os
+.idea
+.vscode/*
+!.vscode/extensions.json
 
 # vercel
 .vercel
@@ -39,3 +50,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Payload local uploads
+/media
