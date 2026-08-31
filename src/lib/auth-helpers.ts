@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import type { Role } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 /**
  * מחזיר את המשתמש המחובר, או מפנה ל-sign-in אם אין.
@@ -14,10 +14,10 @@ export async function requireUser() {
   return session.user;
 }
 
-/** דורש תפקיד מסוים (למשל ADMIN). מפנה ל-dashboard אם אין הרשאה. */
-export async function requireRole(role: Role) {
+/** דורש שלמשתמש יהיה תפקיד מסוים (למשל ADMIN). מפנה ל-dashboard אם אין הרשאה. */
+export async function requireRole(role: UserRole) {
   const user = await requireUser();
-  if (user.role !== role) {
+  if (!user.roles.includes(role)) {
     redirect("/dashboard");
   }
   return user;

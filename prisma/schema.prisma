@@ -1,6 +1,13 @@
-// Prisma schema — שלב תשתית
+// Prisma schema — שותפים / BridgeAd
 // מסמכי Prisma: https://pris.ly/d/prisma-schema
-// שינוי סכמה: ערוך כאן ואז `pnpm db:migrate`
+// שינוי סכמה: ערוך כאן ואז `npm run db:migrate`. ה-CLI של Payload לא מעורב (schema נפרד: payload).
+//
+// כללי אצבע:
+//  • מזהים: cuid() בכל הטבלאות.
+//  • כסף: Decimal @db.Decimal(12,2), שדות בסיומת ...ILS. אף פעם לא Float לכסף.
+//  • enums משותפים (VerificationStatus / ProfileStatus / LegalEntityType) — לא לשכפל.
+//  • מחיקה רכה (deletedAt) לפרופילים ולנכסים; לוגים פיננסיים/משפטיים לא נמחקים (onDelete: Restrict).
+//  • חשבוניות: שכבה פיקטיבית — pdfUrl מקומי, externalProvider=LOCAL_MOCK עד חיבור API אמיתי.
 
 generator client {
   provider = "prisma-client-js"
@@ -12,32 +19,299 @@ datasource db {
   directUrl = env("DIRECT_URL") // חיבור ישיר — למיגרציות בלבד
 }
 
-// ─────────────────────────────────────────────
-//  הרשאות
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  Enums
+// ═══════════════════════════════════════════════════════════════
 
-enum Role {
+/// כובעים שמשתמש יכול ללבוש. משתמש יכול להחזיק כמה במקביל (roles[]).
+enum UserRole {
+  BRAND
+  CREATOR
+  AD_SPACE_OWNER
   ADMIN
-  USER
 }
 
-// ─────────────────────────────────────────────
-//  משתמשים ואימות (Auth.js / NextAuth)
-// ─────────────────────────────────────────────
+enum UserStatus {
+  PENDING_ONBOARDING
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+/// סטטוס פרופיל/נכס — משותף לכל סוגי הפרופילים.
+enum ProfileStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+/// אימות ידני ע"י צוות המערכת — משותף.
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+/// סוג התאגדות לצורכי מס — משותף לעסק ולספק מדיה.
+enum LegalEntityType {
+  LTD
+  LICENSED_DEALER
+  EXEMPT_DEALER
+  PARTNERSHIP
+}
+
+enum BusinessModel {
+  PHYSICAL
+  ONLINE
+  HYBRID
+}
+
+/// מעמד המס של יוצר (רלוונטי להפקת מסמכי זיכוי/משיכה).
+enum CreatorTaxStatus {
+  EXEMPT_DEALER
+  LICENSED_DEALER
+  COMPANY
+  INDIVIDUAL_WITHHOLDING
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  FACEBOOK
+  LINKEDIN
+}
+
+enum DeliverableType {
+  IG_REEL
+  IG_STORY
+  TIKTOK_VIDEO
+  YOUTUBE_INTEGRATION
+  EVENT_ATTENDANCE
+}
+
+enum AdSpaceType {
+  DIGITAL_BILLBOARD
+  STATIC_BILLBOARD
+  TRANSIT
+  NEWSLETTER
+  PODCAST_SPONSORSHIP
+}
+
+enum AdPricingModel {
+  DAILY
+  WEEKLY
+  MONTHLY
+  PER_CPM
+  PER_BROADCAST
+}
+
+/// סוג ההוכחה הנדרש לשחרור ה-Escrow עבור שטח פרסום.
+enum ProofRequirement {
+  PHOTO_CONFIRMATION
+  ANALYTICS_REPORT
+  SYSTEM_LOG
+}
+
+enum CampaignTargetType {
+  CREATOR
+  AD_SPACE
+  BOTH
+}
+
+enum CampaignStatus {
+  DRAFT
+  OPEN_FOR_PITCHES
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ContractStatus {
+  AWAITING_ESCROW
+  ACTIVE
+  SUBMITTED_FOR_REVIEW
+  APPROVED
+  DISPUTED
+  REFUNDED
+}
+
+enum BookingStatus {
+  RESERVED
+  CONFIRMED
+  BROADCASTING
+  COMPLETED
+  CANCELLED
+}
+
+enum EscrowStatus {
+  HELD
+  RELEASED_TO_PROVIDER
+  REFUNDED_TO_BRAND
+  SPLIT_DISPUTE
+}
+
+enum TransactionType {
+  ESCROW_DEPOSIT
+  ESCROW_RELEASE
+  WITHDRAWAL
+  PLATFORM_FEE
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum InvoiceDocumentType {
+  TAX_INVOICE
+  RECEIPT
+  CREDIT_INVOICE
+}
+
+/// ספק החשבוניות. LOCAL_MOCK = מסמך דמה מקומי עד חיבור API אמיתי.
+enum InvoiceProvider {
+  LOCAL_MOCK
+  GREEN_INVOICE
+  MORNING
+}
+
+enum SubmissionStatus {
+  PENDING_REVIEW
+  REVISION_REQUESTED
+  APPROVED
+}
+
+enum ProofType {
+  PHOTO_PROOF
+  SYSTEM_LOG
+  ANALYTICS_EXPORT
+}
+
+enum NotificationType {
+  ESCROW_LOCKED
+  SUBMISSION_RECEIVED
+  REVISION_NEEDED
+  PAYMENT_RELEASED
+}
+
+enum DisputeReason {
+  MISSED_DEADLINE
+  LOW_QUALITY
+  BRIEF_DEVIATION
+  NON_RESPONSIVE
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_ARBITRATION
+  RESOLVED_REFUND
+  RESOLVED_PAYOUT
+  SPLIT
+}
+
+enum ReviewSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum ConsentDocumentType {
+  TERMS_OF_SERVICE
+  ESCROW_AGREEMENT
+  PRIVACY_POLICY
+}
+
+enum MediaFileType {
+  VIDEO_DRAFT
+  IMAGE_ASSET
+  INVOICE_PDF
+  PROOF_OF_PLAY
+}
+
+enum BlockReportReason {
+  OFF_PLATFORM_PAYMENT_ATTEMPT
+  HARASSMENT
+  SPAM
+  COPYRIGHT_INFRINGEMENT
+}
+
+enum BlockReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum IsraelDistrict {
+  TEL_AVIV
+  CENTRAL
+  NORTH
+  SOUTH
+  JERUSALEM
+  HAIFA
+  JUDEA_SAMARIA
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  משתמשים ואימות (Auth.js / NextAuth — PrismaAdapter)
+// ═══════════════════════════════════════════════════════════════
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(USER)
+  id               String     @id @default(cuid())
+  name             String? // שדה של האדפטר — שם תצוגה קנוני
+  email            String?    @unique
+  emailVerified    DateTime?
+  image            String? // שדה של האדפטר — אווטאר כללי
+  phone            String?    @unique
+  phoneVerified    DateTime?
+  passwordHash     String? // שמור ל-passwordless עכשיו; nullable לעתיד
+  roles            UserRole[] @default([])
+  activeRole       UserRole? // איזה כובע ה-UI מציג כרגע
+  status           UserStatus @default(PENDING_ONBOARDING)
+  twoFactorEnabled Boolean    @default(false)
+  lastLoginAt      DateTime?
+  termsAcceptedAt  DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  deletedAt        DateTime?
 
   accounts Account[]
   sessions Session[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  businessProfile     BusinessProfile?
+  creatorProfile      CreatorProfile?
+  adSpaceOwnerProfile AdSpaceOwnerProfile?
+
+  campaignApplications CampaignApplication[]
+  providerContracts    Contract[]                @relation("ContractProvider")
+  transactions         Transaction[]
+  invoices             Invoice[]
+  sentMessages         Message[]
+  conversations        ConversationParticipant[]
+  notifications        Notification[]
+  deliverableFeedback  ContentFeedback[]
+  authoredReviews      Review[]                  @relation("ReviewAuthor")
+  receivedReviews      Review[]                  @relation("ReviewTarget")
+  auditLogs            AuditLog[]
+  legalConsents        LegalConsent[]
+  uploadedMedia        MediaAttachment[]
+  openedDisputes       Dispute[]                 @relation("DisputeInitiator")
+  arbitratedDisputes   Dispute[]                 @relation("DisputeArbitrator")
+  disputeMessages      DisputeMessage[]
+  reportsMade          UserBlockReport[]         @relation("BlockReporter")
+  reportsReceived      UserBlockReport[]         @relation("BlockReported")
+
+  @@index([status])
+  @@index([deletedAt])
 }
 
 model Account {
@@ -52,24 +326,25 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
   @@id([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -78,4 +353,697 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  פרופיל עסק (BRAND)
+// ═══════════════════════════════════════════════════════════════
+
+model BusinessProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  name               String
+  legalName          String?
+  companyId          String             @unique // ח.פ / עוסק מורשה
+  entityType         LegalEntityType
+  description        String
+  businessModel      BusinessModel
+  status             ProfileStatus      @default(ACTIVE)
+  verificationStatus VerificationStatus @default(PENDING)
+  logoUrl            String?
+  websiteUrl         String?
+  socialLinks        Json? // { instagram, tiktok, facebook }
+  contactName        String
+  contactPhone       String
+  billingEmail       String
+  billingAddress     String
+  billingCustomerId  String? // מזהה לקוח בספק הסליקה
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations  BusinessLocation[]
+  categories BusinessCategory[]
+  campaigns  Campaign[]
+  contracts  Contract[]
+
+  @@index([verificationStatus])
+  @@index([status])
+}
+
+/// סניפי העסק — רק לעסקים פיזיים או היברידיים.
+model BusinessLocation {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String? // כינוי הסניף
+  cityId     String
+  address    String
+  isPrimary  Boolean  @default(false)
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business  BusinessProfile @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  city      City            @relation(fields: [cityId], references: [id])
+  campaigns Campaign[]
+
+  @@index([businessId])
+  @@index([cityId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  פרופיל יוצר (CREATOR)
+// ═══════════════════════════════════════════════════════════════
+
+model CreatorProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  displayName        String
+  legalFullName      String // שם מלא לפי ת.ז — למשיכות ודיווח מס
+  idNumber           String             @unique // ת.ז / ח.פ / עוסק
+  taxStatus          CreatorTaxStatus
+  bio                String
+  primaryCityId      String?
+  avatarUrl          String?
+  coverImageUrl      String?
+  status             ProfileStatus      @default(ACTIVE)
+  verificationStatus VerificationStatus @default(PENDING)
+  reliabilityScore   Float              @default(0) // 0-100, מבוסס עמידה בזמנים וסיום קמפיינים
+  payoutBankDetails  Json? // { bank, branch, account, accountHolder }
+  billingAddress     String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryCity     City?                   @relation(fields: [primaryCityId], references: [id])
+  channels        CreatorChannel[]
+  pricingPackages CreatorPricingPackage[]
+  categories      CreatorCategory[]
+
+  @@index([verificationStatus])
+  @@index([status])
+  @@index([primaryCityId])
+}
+
+/// ערוצי הסושיאל של היוצר (יחס 1:N).
+model CreatorChannel {
+  id                String         @id @default(cuid())
+  creatorId         String
+  platform          SocialPlatform
+  handle            String
+  channelUrl        String
+  followersCount    Int            @default(0)
+  avgViews          Int?
+  engagementRate    Float?
+  isChannelVerified Boolean        @default(false) // חובר דרך OAuth / API
+  lastSyncedAt      DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, platform])
+  @@index([creatorId])
+}
+
+/// מחירון ושירותים של היוצר (יחס 1:N).
+model CreatorPricingPackage {
+  id                String          @id @default(cuid())
+  creatorId         String
+  deliverableType   DeliverableType
+  title             String
+  priceILS          Decimal         @db.Decimal(12, 2) // לפני מע"מ / עמלת מערכת
+  turnaroundDays    Int
+  revisionsIncluded Int             @default(1)
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  creator      CreatorProfile        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  applications CampaignApplication[]
+  contracts    Contract[]
+
+  @@index([creatorId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  פרופיל ספק מדיה (AD_SPACE_OWNER)
+// ═══════════════════════════════════════════════════════════════
+
+model AdSpaceOwnerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  companyName        String
+  legalName          String
+  companyId          String             @unique
+  entityType         LegalEntityType
+  contactName        String
+  contactPhone       String
+  billingEmail       String
+  billingAddress     String
+  payoutBankDetails  Json? // פרטי חשבון בנק לקבלת כספי Escrow
+  verificationStatus VerificationStatus @default(PENDING)
+  status             ProfileStatus      @default(ACTIVE)
+  reliabilityScore   Float              @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets AdSpaceAsset[]
+
+  @@index([verificationStatus])
+  @@index([status])
+}
+
+/// נכסי המדיה ושטחי הפרסום (יחס 1:N).
+model AdSpaceAsset {
+  id               String           @id @default(cuid())
+  ownerId          String
+  title            String
+  type             AdSpaceType
+  description      String
+  cityId           String? // חובה לשטחים פיזיים, ריק לדיגיטליים
+  address          String?
+  dimensions       String? // "12x4 מטר"
+  technicalSpecs   Json? // רזולוציה, יחס מסך, פורמטים, משקל, אורך ספוט
+  estimatedReach   Int? // חשיפות משוערות לתקופה
+  pricingModel     AdPricingModel
+  basePriceILS     Decimal          @db.Decimal(12, 2)
+  images           String[]
+  proofRequirement ProofRequirement
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  owner        AdSpaceOwnerProfile    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  city         City?                  @relation(fields: [cityId], references: [id])
+  categories   AdSpaceAssetCategory[]
+  applications CampaignApplication[]
+  contracts    Contract[]
+  bookings     AdSpaceBooking[]
+
+  @@index([ownerId])
+  @@index([cityId])
+  @@index([type, isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  נתוני עזר: ערים וקטגוריות
+// ═══════════════════════════════════════════════════════════════
+
+model City {
+  id        String         @id @default(cuid())
+  nameHe    String         @unique
+  nameEn    String?
+  district  IsraelDistrict
+  isActive  Boolean        @default(true)
+  sortOrder Int            @default(0)
+
+  businessLocations BusinessLocation[]
+  creators          CreatorProfile[]
+  adSpaceAssets     AdSpaceAsset[]
+
+  @@index([district])
+}
+
+// הקטגוריות עצמן מנוהלות ב-Payload (collection `categories`, schema payload) —
+// עריכה דרך /admin. כאן שומרים רק את ה-slug כהפניה רופפת (בלי FK חוצה-schema).
+// מחיקת קטגוריה ב-Payload: להשתמש ב-isActive=false, לא במחיקה קשה.
+
+model CreatorCategory {
+  creatorId    String
+  categorySlug String
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@id([creatorId, categorySlug])
+  @@index([categorySlug])
+}
+
+model BusinessCategory {
+  businessId   String
+  categorySlug String
+
+  business BusinessProfile @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@id([businessId, categorySlug])
+  @@index([categorySlug])
+}
+
+model CampaignCategory {
+  campaignId   String
+  categorySlug String
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, categorySlug])
+  @@index([categorySlug])
+}
+
+model AdSpaceAssetCategory {
+  adSpaceAssetId String
+  categorySlug   String
+
+  adSpaceAsset AdSpaceAsset @relation(fields: [adSpaceAssetId], references: [id], onDelete: Cascade)
+
+  @@id([adSpaceAssetId, categorySlug])
+  @@index([categorySlug])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  קמפיינים, הצעות וחוזים
+// ═══════════════════════════════════════════════════════════════
+
+/// בריף / קמפיין ראשי שמפרסם עסק.
+model Campaign {
+  id              String             @id @default(cuid())
+  businessId      String
+  locationId      String? // סניף ספציפי (אופציונלי)
+  title           String
+  description     String
+  targetType      CampaignTargetType
+  targetPlatforms String[]
+  deliverables    DeliverableType[] // תוצרים מבוקשים מהבריף
+  briefAssetsUrl  String? // קישור לחומרי גלם / מיתוג
+  totalBudgetILS  Decimal            @db.Decimal(12, 2)
+  startDate       DateTime?
+  endDate         DateTime?
+  status          CampaignStatus     @default(DRAFT)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  business      BusinessProfile       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location      BusinessLocation?     @relation(fields: [locationId], references: [id])
+  applications  CampaignApplication[]
+  contracts     Contract[]
+  categories    CampaignCategory[]
+  conversations Conversation[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+/// הצעת מחיר / פנייה של יוצר או בעל שטח לבריף.
+model CampaignApplication {
+  id                    String            @id @default(cuid())
+  campaignId            String
+  applicantId           String // User.id של המגיש
+  pricingPackageId      String? // אם הצעה מבוססת חבילת יוצר
+  adSpaceAssetId        String? // אם הצעה מבוססת שטח פרסום
+  proposedPriceILS      Decimal           @db.Decimal(12, 2)
+  coverLetter           String?
+  estimatedDeliveryDays Int
+  status                ApplicationStatus @default(SUBMITTED)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  campaign       Campaign               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  applicant      User                   @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  pricingPackage CreatorPricingPackage? @relation(fields: [pricingPackageId], references: [id])
+  adSpaceAsset   AdSpaceAsset?          @relation(fields: [adSpaceAssetId], references: [id])
+  contract       Contract?
+
+  @@unique([campaignId, applicantId])
+  @@index([applicantId])
+  @@index([status])
+}
+
+/// הסכם עבודה מחייב לקמפיין.
+model Contract {
+  id               String         @id @default(cuid())
+  campaignId       String
+  applicationId    String?        @unique
+  businessId       String
+  providerId       String // User.id של היוצר / בעל השטח שנבחר
+  pricingPackageId String?
+  adSpaceAssetId   String?
+  agreedPriceILS   Decimal        @db.Decimal(12, 2)
+  platformFeeILS   Decimal        @db.Decimal(12, 2)
+  deadline         DateTime
+  status           ContractStatus @default(AWAITING_ESCROW)
+  revisionRoundsMax  Int          @default(2) // מכסת סבבי תיקונים בהסכם
+  revisionRoundsUsed Int          @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  completedAt      DateTime?
+
+  campaign       Campaign               @relation(fields: [campaignId], references: [id])
+  application    CampaignApplication?   @relation(fields: [applicationId], references: [id])
+  business       BusinessProfile        @relation(fields: [businessId], references: [id])
+  provider       User                   @relation("ContractProvider", fields: [providerId], references: [id])
+  pricingPackage CreatorPricingPackage? @relation(fields: [pricingPackageId], references: [id])
+  adSpaceAsset   AdSpaceAsset?          @relation(fields: [adSpaceAssetId], references: [id])
+
+  escrowHold    EscrowHold?
+  bookings      AdSpaceBooking[]
+  submissions   DeliverableSubmission[]
+  proofs        ProofOfPlay[]
+  transactions  Transaction[]
+  dispute       Dispute?
+  reviews       Review[]
+  conversations Conversation[]
+
+  @@index([campaignId])
+  @@index([businessId])
+  @@index([providerId])
+  @@index([status])
+}
+
+/// יומן שיבוצים לשטחי פרסום.
+model AdSpaceBooking {
+  id             String        @id @default(cuid())
+  adSpaceAssetId String
+  contractId     String
+  startDate      DateTime
+  endDate        DateTime
+  status         BookingStatus @default(RESERVED)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  adSpaceAsset AdSpaceAsset @relation(fields: [adSpaceAssetId], references: [id])
+  contract     Contract     @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([adSpaceAssetId, startDate, endDate])
+  @@index([contractId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  כספים — Escrow, תנועות, חשבוניות (שכבה פיקטיבית בשלב זה)
+// ═══════════════════════════════════════════════════════════════
+
+/// נעילת כספים בנאמנות לחוזה. מעברי סטטוס ידניים/אדמין עד חיבור PSP.
+model EscrowHold {
+  id         String       @id @default(cuid())
+  contractId String       @unique
+  amountILS  Decimal      @db.Decimal(12, 2)
+  status     EscrowStatus @default(HELD)
+  fundedAt   DateTime? // מועד הפקדת הכסף ע"י העסק
+  releasedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@index([status])
+}
+
+/// יומן תנועות כספיות בארנק המערכת.
+model Transaction {
+  id           String            @id @default(cuid())
+  userId       String
+  contractId   String?
+  type         TransactionType
+  amountILS    Decimal           @db.Decimal(12, 2)
+  feeAmountILS Decimal           @default(0) @db.Decimal(12, 2)
+  status       TransactionStatus @default(PENDING)
+  referenceId  String? // אסמכתא מספק הסליקה / העברה בנקאית
+  createdAt    DateTime          @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([contractId])
+  @@index([type])
+}
+
+/// מסמכי חיוב, קבלות וחשבוניות מס. פיקטיבי: pdfUrl מקומי, provider=LOCAL_MOCK.
+model Invoice {
+  id                 String              @id @default(cuid())
+  transactionId      String?
+  recipientUserId    String
+  documentType       InvoiceDocumentType
+  amountBeforeTax    Decimal             @db.Decimal(12, 2)
+  taxAmount          Decimal             @db.Decimal(12, 2)
+  totalAmount        Decimal             @db.Decimal(12, 2)
+  customerName       String
+  customerTaxId      String
+  pdfUrl             String?
+  externalProvider   InvoiceProvider     @default(LOCAL_MOCK)
+  externalDocumentId String? // מזהה מסמך מהספק החיצוני
+  issuedAt           DateTime            @default(now())
+
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+  recipient   User         @relation(fields: [recipientUserId], references: [id])
+
+  @@index([transactionId])
+  @@index([recipientUserId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  תוצרים, הגשות והוכחות שידור
+// ═══════════════════════════════════════════════════════════════
+
+/// הגשות תוכן וסקיצות לבדיקה (עבור יוצרים).
+model DeliverableSubmission {
+  id          String           @id @default(cuid())
+  contractId  String
+  version     Int
+  fileUrl     String
+  notes       String?
+  status      SubmissionStatus @default(PENDING_REVIEW)
+  submittedAt DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  contract Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  feedback ContentFeedback[]
+
+  @@unique([contractId, version])
+  @@index([contractId])
+}
+
+/// הערות ותיקונים על גבי תוצר, כולל חותמת זמן בוידאו.
+model ContentFeedback {
+  id               String   @id @default(cuid())
+  submissionId     String
+  authorId         String // User.id של העסק
+  timestampSeconds Int? // Timecode בוידאו
+  feedbackText     String
+  isResolved       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  submission DeliverableSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  author     User                  @relation(fields: [authorId], references: [id])
+
+  @@index([submissionId])
+}
+
+/// אימות שידור לשטחי פרסום (עבור בעלי שטחים).
+model ProofOfPlay {
+  id              String    @id @default(cuid())
+  contractId      String
+  proofType       ProofType
+  fileUrl         String
+  notes           String?
+  verifiedByBrand Boolean   @default(false)
+  uploadedAt      DateTime  @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  תקשורת והתראות
+// ═══════════════════════════════════════════════════════════════
+
+/// שיחה מבוססת הקשר (בריף / חוזה) או ישירה.
+model Conversation {
+  id         String   @id @default(cuid())
+  campaignId String?
+  contractId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign     Campaign?                 @relation(fields: [campaignId], references: [id])
+  contract     Contract?                 @relation(fields: [contractId], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([campaignId])
+  @@index([contractId])
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  attachmentUrl  String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  actionUrl String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  מחלוקות ובוררות
+// ═══════════════════════════════════════════════════════════════
+
+model Dispute {
+  id              String        @id @default(cuid())
+  contractId      String        @unique
+  initiatorId     String
+  reason          DisputeReason
+  description     String
+  status          DisputeStatus @default(OPEN)
+  arbitratorId    String? // מנהל מערכת שמטפל בתיק
+  resolutionNotes String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  resolvedAt      DateTime?
+
+  contract   Contract         @relation(fields: [contractId], references: [id])
+  initiator  User             @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  arbitrator User?            @relation("DisputeArbitrator", fields: [arbitratorId], references: [id])
+  messages   DisputeMessage[]
+
+  @@index([status])
+}
+
+/// פרוטוקול וראיות במחלוקת.
+model DisputeMessage {
+  id          String   @id @default(cuid())
+  disputeId   String
+  senderId    String // צד או בורר
+  message     String
+  evidenceUrl String?
+  createdAt   DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderId], references: [id])
+
+  @@index([disputeId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  דירוגים, ביקורת ותיעוד משפטי
+// ═══════════════════════════════════════════════════════════════
+
+/// דירוג והמלצות דו-צדדיות לאחר חוזה.
+model Review {
+  id                  String          @id @default(cuid())
+  contractId          String
+  authorId            String
+  targetId            String
+  sentiment           ReviewSentiment
+  rating              Int // 1-5
+  feedbackText        String
+  punctualityRating   Int?
+  communicationRating Int?
+  paymentRating       Int?
+  isPublic            Boolean         @default(true)
+  createdAt           DateTime        @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id])
+  author   User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  target   User     @relation("ReviewTarget", fields: [targetId], references: [id])
+
+  @@unique([contractId, authorId])
+  @@index([targetId])
+}
+
+/// יומן ביקורת. append-only — אין updatedAt, אין מחיקה.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json? // { before, after }
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+}
+
+/// תיעוד הסכמות חוזיות (append-only).
+model LegalConsent {
+  id           String              @id @default(cuid())
+  userId       String
+  documentType ConsentDocumentType
+  version      String // "v1.2"
+  ipAddress    String?
+  acceptedAt   DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// ניהול קבצים מאובטח במערכת.
+model MediaAttachment {
+  id            String        @id @default(cuid())
+  uploaderId    String
+  fileUrl       String // נתיב אחסון (מקומי / S3 בהמשך)
+  fileType      MediaFileType
+  mimeType      String
+  fileSizeBytes BigInt
+  checksum      String? // SHA-256
+  createdAt     DateTime      @default(now())
+
+  uploader User @relation(fields: [uploaderId], references: [id])
+
+  @@index([uploaderId])
+}
+
+/// דיווחים וחסימות משתמשים.
+model UserBlockReport {
+  id             String            @id @default(cuid())
+  reporterId     String
+  reportedUserId String
+  reason         BlockReportReason
+  description    String
+  evidenceUrl    String?
+  status         BlockReportStatus @default(OPEN)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  reporter     User @relation("BlockReporter", fields: [reporterId], references: [id])
+  reportedUser User @relation("BlockReported", fields: [reportedUserId], references: [id])
+
+  @@index([reportedUserId])
+  @@index([status])
 }

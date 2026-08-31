@@ -95,6 +95,13 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
           </button>
         </form>
       )}
+
+      <p className="text-center text-sm text-black/60 dark:text-white/60">
+        אין לך חשבון?{" "}
+        <Link href="/register" className="text-primary font-semibold hover:underline">
+          הרשמה למערכת
+        </Link>
+      </p>
     </div>
   );
 }

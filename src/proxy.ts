@@ -8,7 +8,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * דרך auth(). ראה: docs — "optimistic checks with Proxy".
  */
 
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  // שלבי ההרשמה שאחרי יצירת החשבון — דורשים session. "/register" עצמו נשאר ציבורי.
+  "/register/roles",
+  "/register/profile",
+  "/register/complete",
+];
 
 // שמות עוגיית ה-session של Auth.js v5 (dev / production)
 const SESSION_COOKIES = ["authjs.session-token", "__Secure-authjs.session-token"];

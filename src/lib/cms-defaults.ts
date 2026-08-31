@@ -8,7 +8,7 @@ import type { MainNavigation, SiteSetting } from "@/payload-types";
 export const DEFAULT_AUTH: NonNullable<SiteSetting["auth"]> = {
   personalAreaUrl: "/dashboard",
   loginUrl: "/sign-in",
-  signupUrl: "/sign-in",
+  signupUrl: "/register",
   loginLabel: "התחברות",
   signupLabel: "הרשמה למערכת",
   loggedInLabel: "האזור האישי",

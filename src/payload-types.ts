@@ -111,6 +111,66 @@ export interface MainNavigation {
   createdAt?: string | null;
 }
 
+/** global: auth-panel — הפאנל הצדדי הכהה של מסכי ההרשמה/כניסה. ראה src/globals/AuthPanel.ts */
+export interface AuthPanel {
+  id: number;
+  statusLabel?: string | null;
+  heading: {
+    lead: string;
+    highlight: string;
+  };
+  body: string;
+  metric: {
+    label: string;
+    value: string;
+    steps?:
+      | {
+          icon: "lock" | "video" | "payments";
+          label: string;
+          id?: string | null;
+        }[]
+      | null;
+    trustText?: string | null;
+    trustAvatars?:
+      | {
+          image: number | Media;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  testimonial: {
+    quote: string;
+    name: string;
+    photo?: (number | null) | Media;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+
+/** global: register-roles — שלב 2 בהרשמה (בחירת תפקיד). ראה src/globals/RegisterRoles.ts */
+export interface RegisterRolesRole {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  benefits?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+}
+
+export interface RegisterRoles {
+  id: number;
+  heading: string;
+  subheading: string;
+  brandRole: RegisterRolesRole;
+  creatorRole: RegisterRolesRole;
+  spaceRole: RegisterRolesRole;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+
 /** global: homepage */
 export interface Homepage {
   id: number;
@@ -712,6 +772,20 @@ export interface LegalPage {
     metaTitle?: string | null;
     metaDescription?: string | null;
   };
+  updatedAt: string;
+  createdAt: string;
+}
+
+/** collection: categories — קטגוריות הדומיין (נערך דרך /admin). ראה src/collections/Categories.ts */
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  scopes: ("BRAND" | "CREATOR" | "AD_SPACE")[];
+  parent?: (number | null) | Category;
+  iconName?: string | null;
+  isActive?: boolean | null;
+  sortOrder?: number | null;
   updatedAt: string;
   createdAt: string;
 }
