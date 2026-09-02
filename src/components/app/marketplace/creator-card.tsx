@@ -2,15 +2,21 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { LocationIcon, StarIcon, VerifiedIcon } from "@/components/marketing/icons";
 import { formatFollowersShort, type MarketplaceCreator } from "@/lib/marketplace";
+import {
+  InviteToCampaignDialog,
+  type OpenCampaign,
+} from "@/components/app/pitch/invite-to-campaign-dialog";
 
 /** כרטיס יוצר במרקטפלייס — זהות, תחומים, מדדים, מחיר פתיחה ודירוג. */
 export function CreatorCard({
   creator,
   categoryLabels,
+  openCampaigns,
 }: {
   creator: MarketplaceCreator;
   /** slug → שם תצוגה (מ-Payload) */
   categoryLabels: Record<string, string>;
+  openCampaigns: OpenCampaign[];
 }) {
   const initial = creator.displayName.trim().charAt(0) || "?";
 
@@ -70,12 +76,11 @@ export function CreatorCard({
       </div>
 
       <div className="mt-auto flex flex-col gap-2 pt-1 sm:flex-row">
-        <button
-          type="button"
-          className="bg-primary text-on-primary hover:bg-primary-hover shadow-ambient-sm flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
-        >
-          הזמנה לבריף
-        </button>
+        <InviteToCampaignDialog
+          creatorUserId={creator.userId}
+          openCampaigns={openCampaigns}
+          className="bg-primary text-on-primary hover:bg-primary-hover shadow-ambient-sm flex-1 cursor-pointer rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors"
+        />
         <Link
           href={`/dashboard/marketplace/${creator.id}`}
           className="border-outline-variant text-on-surface hover:bg-surface-low flex-1 rounded-lg border px-3 py-2 text-center text-sm font-semibold transition-colors"

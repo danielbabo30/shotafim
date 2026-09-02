@@ -81,11 +81,16 @@ export default async function CampaignsPage({
           {campaigns.map((campaign) => (
             <li
               key={campaign.id}
-              className="border-outline-variant bg-surface-lowest shadow-ambient-sm rounded-lg border p-5"
+              className="border-outline-variant bg-surface-lowest shadow-ambient-sm hover:border-outline rounded-lg border p-5 transition-colors"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-on-surface truncate text-base font-bold">{campaign.title}</h3>
+                  <Link
+                    href={`/dashboard/campaigns/${campaign.id}`}
+                    className="text-on-surface hover:text-primary block truncate text-base font-bold"
+                  >
+                    {campaign.title}
+                  </Link>
                   <p className="text-on-surface-variant mt-1 text-xs">
                     {targetTypeLabel(campaign.targetType)} · עודכן{" "}
                     {shortDate.format(campaign.updatedAt)}
@@ -125,6 +130,15 @@ export default async function CampaignsPage({
                   <dd className="text-on-surface font-medium">{campaign.applicationCount}</dd>
                 </div>
               </dl>
+
+              <Link
+                href={`/dashboard/campaigns/${campaign.id}`}
+                className="text-primary mt-4 inline-block text-sm font-medium hover:underline"
+              >
+                {campaign.applicationCount > 0
+                  ? `צפייה ב-${campaign.applicationCount} הצעות ←`
+                  : "צפייה בבריף ←"}
+              </Link>
             </li>
           ))}
         </ul>

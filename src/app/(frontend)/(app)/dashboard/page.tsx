@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { requireActiveUser } from "@/lib/app-user";
 import { ROLE_META } from "@/lib/app-nav";
 import { BrandDashboard } from "@/components/app/dashboard/brand-dashboard";
+import { SpaceDashboard } from "@/components/app/dashboard/space/space-dashboard";
+import { CreatorDashboard } from "@/components/app/dashboard/creator/creator-dashboard";
 import { DashboardHeader } from "@/components/app/dashboard/dashboard-header";
 
 export const metadata: Metadata = { title: "לוח בקרה" };
@@ -13,7 +15,15 @@ export default async function DashboardPage() {
     return <BrandDashboard user={user} />;
   }
 
-  // שאר הכובעים (יוצר / בעל שטחים / ניהול) — לוחות ייעודיים ייבנו בשלבים הבאים.
+  if (user.activeRole === "space") {
+    return <SpaceDashboard user={user} />;
+  }
+
+  if (user.activeRole === "creator") {
+    return <CreatorDashboard />;
+  }
+
+  // כובע הניהול — לוח ייעודי ייבנה בשלב הבא.
   const role = ROLE_META[user.activeRole];
   return (
     <div className="flex flex-col gap-8">

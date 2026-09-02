@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireActiveUser } from "@/lib/app-user";
 import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
 import { getMarketplaceCreators } from "@/lib/marketplace-query";
+import { listBrandOpenCampaigns } from "@/lib/campaigns";
 import { MarketplaceBrowser } from "@/components/app/marketplace/marketplace-browser";
 
 export const metadata: Metadata = { title: "מרקטפלייס יוצרים" };
@@ -22,9 +23,10 @@ export default async function MarketplacePage() {
     );
   }
 
-  const [creators, categories] = await Promise.all([
+  const [creators, categories, openCampaigns] = await Promise.all([
     getMarketplaceCreators(),
     getPartnerCategoriesForScope("CREATOR"),
+    listBrandOpenCampaigns("CREATOR"),
   ]);
 
   return (
@@ -41,6 +43,7 @@ export default async function MarketplacePage() {
       <MarketplaceBrowser
         creators={creators}
         categories={categories.map((c) => ({ slug: c.slug, name: c.name }))}
+        openCampaigns={openCampaigns.map((c) => ({ id: c.id, title: c.title }))}
       />
     </div>
   );

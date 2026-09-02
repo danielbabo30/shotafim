@@ -10,11 +10,11 @@ import { sendRoomMessage } from "@/lib/actions/contract-actions";
 
 export function RoomChat({
   contractId,
-  provider,
+  counterparty,
   entries,
 }: {
   contractId: string;
-  provider: { name: string; image: string | null; handle: string | null };
+  counterparty: { name: string; image: string | null; handle: string | null };
   entries: ThreadEntry[];
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -28,10 +28,16 @@ export function RoomChat({
   return (
     <div className="border-outline-variant bg-surface-lowest shadow-ambient-sm flex min-h-[420px] flex-col overflow-hidden rounded-lg border">
       <header className="border-outline-variant flex items-center gap-3 border-b p-4">
-        <MessageAvatar name={provider.name} src={provider.image ?? undefined} className="size-10" />
+        <MessageAvatar
+          name={counterparty.name}
+          src={counterparty.image ?? undefined}
+          className="size-10"
+        />
         <div className="min-w-0">
-          <h2 className="text-on-surface truncate text-sm font-bold">{provider.name}</h2>
-          {provider.handle && <p className="text-on-surface-variant text-xs">@{provider.handle}</p>}
+          <h2 className="text-on-surface truncate text-sm font-bold">{counterparty.name}</h2>
+          {counterparty.handle && (
+            <p className="text-on-surface-variant text-xs">@{counterparty.handle}</p>
+          )}
         </div>
       </header>
 

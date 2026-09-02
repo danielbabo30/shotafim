@@ -9,6 +9,8 @@ import { SocialPlatform } from "@prisma/client";
 
 export type MarketplaceCreator = {
   id: string;
+  /** User.id של היוצר — נדרש להזמנה לבריף */
+  userId: string;
   displayName: string;
   /** ערך אזור לסינון — אחד מ-MARKETPLACE_REGIONS (ללא "all") */
   regionValue: string;

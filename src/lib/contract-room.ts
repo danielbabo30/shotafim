@@ -13,6 +13,16 @@ export type ContractActionState = {
 
 export const CONTRACT_ACTION_INITIAL: ContractActionState = { status: "idle" };
 
+/** מי מהצדדים צופה בחדר העבודה */
+export type ContractParty = "brand" | "provider";
+
+/** האם המפרסם יכול להפקיד תקציב לנאמנות עכשיו */
+export const canFundEscrow = (status: ContractStatus, hasEscrow: boolean): boolean =>
+  status === "AWAITING_ESCROW" && !hasEscrow;
+
+/** האם הספק יכול להעלות תוצר עכשיו */
+export const canSubmitDeliverable = (status: ContractStatus): boolean => status === "ACTIVE";
+
 export const CONTRACT_STATUS_META: Record<ContractStatus, { label: string; className: string }> = {
   AWAITING_ESCROW: {
     label: "ממתין להפקדה",

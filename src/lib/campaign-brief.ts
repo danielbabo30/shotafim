@@ -76,6 +76,9 @@ export const campaignFormSchema = z
     locationId: z.string().trim().max(60).optional(),
     description: z.string().trim().max(4000, "התיאור ארוך מדי").optional().default(""),
     briefAssetsUrl: z.string().trim().max(500).optional().default(""),
+    hasPhysicalProduct: z
+      .preprocess((v) => v === "on" || v === "true" || v === true, z.boolean())
+      .default(false),
     deliverables: z.array(z.enum(DeliverableType)).default([]),
     totalBudgetILS: z.coerce
       .number({ error: "יש להזין תקציב תקין" })

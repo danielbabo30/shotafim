@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
+import { ReserveAdSpaceDialog } from "@/components/app/pitch/reserve-ad-space-dialog";
 import {
   ScreenIcon,
   BillboardIcon,
@@ -162,9 +163,11 @@ export function AdSpaceCard({
               נתפס
             </Button>
           ) : (
-            <Button href={listing.href} className="shrink-0">
-              {ctaLabel}
-            </Button>
+            <ReserveAdSpaceDialog
+              assetId={listing.id}
+              label={ctaLabel}
+              className="bg-primary text-on-primary hover:bg-primary-hover shrink-0 cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+            />
           )}
         </div>
       </div>

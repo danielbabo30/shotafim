@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
  *   ?next=/some/path                 — יעד ההפניה (ברירת מחדל: /dashboard)
  *   ?pending=1                       — יוצר משתמש PENDING_ONBOARDING נקי (בלי תפקידים/פרופיל)
  *                                      לבדיקת זרימת ההרשמה. next ברירת מחדל: /register/roles
+ *   ?email=someone@demo...           — כניסה כמשתמש קיים לפי מייל (למשל משתמשי הדמו). לא יוצר משתמש.
  */
 
 const DEV_EMAIL = "dev@bridgead.local";
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const pending = params.get("pending") === "1";
+  const asEmail = params.get("email")?.trim().toLowerCase() || null;
   const activeRole = ROLE_MAP[params.get("role") ?? "brand"] ?? "BRAND";
   const next = params.get("next") ?? (pending ? "/register/roles" : "/dashboard");
 
@@ -44,36 +46,47 @@ export async function GET(request: NextRequest) {
       await prisma.user.deleteMany({ where: { email: PENDING_EMAIL } });
     }
 
-    const user = pending
-      ? await prisma.user.create({
-          data: {
-            email: PENDING_EMAIL,
-            emailVerified: now,
-            status: "PENDING_ONBOARDING",
-            roles: [],
-          },
-        })
-      : await prisma.user.upsert({
-          where: { email: DEV_EMAIL },
-          create: {
-            email: DEV_EMAIL,
-            name: "משתמש בדיקה",
-            emailVerified: now,
-            status: "ACTIVE",
-            roles: ["BRAND", "CREATOR", "AD_SPACE_OWNER", "ADMIN"],
-            activeRole,
-            termsAcceptedAt: now,
-            lastLoginAt: now,
-          },
-          update: {
-            status: "ACTIVE",
-            roles: { set: ["BRAND", "CREATOR", "AD_SPACE_OWNER", "ADMIN"] },
-            activeRole,
-            termsAcceptedAt: now,
-            lastLoginAt: now,
-            deletedAt: null,
-          },
-        });
+    let user;
+    if (asEmail) {
+      user = await prisma.user.findUnique({ where: { email: asEmail } });
+      if (!user) {
+        return NextResponse.json(
+          { ok: false, error: `אין משתמש עם המייל ${asEmail}` },
+          { status: 404 },
+        );
+      }
+    } else {
+      user = pending
+        ? await prisma.user.create({
+            data: {
+              email: PENDING_EMAIL,
+              emailVerified: now,
+              status: "PENDING_ONBOARDING",
+              roles: [],
+            },
+          })
+        : await prisma.user.upsert({
+            where: { email: DEV_EMAIL },
+            create: {
+              email: DEV_EMAIL,
+              name: "משתמש בדיקה",
+              emailVerified: now,
+              status: "ACTIVE",
+              roles: ["BRAND", "CREATOR", "AD_SPACE_OWNER", "ADMIN"],
+              activeRole,
+              termsAcceptedAt: now,
+              lastLoginAt: now,
+            },
+            update: {
+              status: "ACTIVE",
+              roles: { set: ["BRAND", "CREATOR", "AD_SPACE_OWNER", "ADMIN"] },
+              activeRole,
+              termsAcceptedAt: now,
+              lastLoginAt: now,
+              deletedAt: null,
+            },
+          });
+    }
 
     const sessionToken = crypto.randomUUID();
     const expires = new Date(now.getTime() + SESSION_DAYS * 24 * 60 * 60 * 1000);

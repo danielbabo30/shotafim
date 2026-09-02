@@ -3,8 +3,8 @@
 import { useActionState, useState } from "react";
 import { cn } from "@/lib/cn";
 import { CheckCircleIcon, LockIcon, ShieldCheckIcon } from "@/components/marketing/icons";
-import { CONTRACT_ACTION_INITIAL } from "@/lib/contract-room";
-import { approveAndRelease, requestRevision } from "@/lib/actions/contract-actions";
+import { CONTRACT_ACTION_INITIAL, type ContractParty } from "@/lib/contract-room";
+import { approveAndRelease, requestRevision, fundEscrow } from "@/lib/actions/contract-actions";
 
 const currency = new Intl.NumberFormat("he-IL", {
   style: "currency",
@@ -16,16 +16,20 @@ export type Milestone = { label: string; done: boolean };
 
 export function EscrowPanel({
   contractId,
+  viewerParty,
   escrowAmountILS,
   milestones,
+  canFund,
   canApprove,
   canRequestRevision,
   revisionRoundsLeft,
   released,
 }: {
   contractId: string;
+  viewerParty: ContractParty;
   escrowAmountILS: number;
   milestones: Milestone[];
+  canFund: boolean;
   canApprove: boolean;
   canRequestRevision: boolean;
   revisionRoundsLeft: number;
@@ -39,10 +43,14 @@ export function EscrowPanel({
     requestRevision,
     CONTRACT_ACTION_INITIAL,
   );
+  const [fundState, fundAction, funding] = useActionState(fundEscrow, CONTRACT_ACTION_INITIAL);
   const [confirmApprove, setConfirmApprove] = useState(false);
   const [showRevision, setShowRevision] = useState(false);
 
-  const feedback = approveState.status !== "idle" ? approveState : revisionState;
+  const feedback = [approveState, revisionState, fundState].find((s) => s.status !== "idle") ?? {
+    status: "idle" as const,
+  };
+  const isProvider = viewerParty === "provider";
 
   return (
     <div className="border-outline-variant bg-surface-lowest shadow-ambient-sm flex flex-col gap-6 rounded-lg border p-6">
@@ -89,11 +97,31 @@ export function EscrowPanel({
 
       {/* פעולות */}
       <div className="border-outline-variant flex flex-col gap-3 border-t pt-4">
-        {released ? (
+        {isProvider ? (
+          <p className="text-on-surface-variant rounded-lg px-3 py-2 text-center text-xs leading-relaxed">
+            {released
+              ? "התשלום אושר ושוחרר אליך."
+              : "התקציב מוחזק בנאמנות. עם אישור המפרסם הוא ישוחרר אליך."}
+          </p>
+        ) : released ? (
           <p className="bg-success-container text-success flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold">
             <CheckCircleIcon className="size-5" />
             התוצר אושר והתשלום שוחרר
           </p>
+        ) : canFund ? (
+          <form action={fundAction} className="flex flex-col gap-2">
+            <input type="hidden" name="contractId" value={contractId} />
+            <p className="text-on-surface-variant text-xs">
+              הפקדת התקציב לנאמנות תפתח את העבודה. הסכום יוחזק עד לאישור התוצר הסופי.
+            </p>
+            <button
+              type="submit"
+              disabled={funding}
+              className="bg-primary text-on-primary hover:bg-primary-hover h-11 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+            >
+              {funding ? "מפקיד…" : `הפקד ${currency.format(escrowAmountILS)} לנאמנות`}
+            </button>
+          </form>
         ) : (
           <>
             {confirmApprove ? (

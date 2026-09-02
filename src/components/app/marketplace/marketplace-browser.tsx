@@ -13,14 +13,17 @@ import {
 } from "@/lib/marketplace";
 
 type CategoryOption = { slug: string; name: string };
+type OpenCampaign = { id: string; title: string };
 
 /** דפדפן המרקטפלייס — חיפוש, שבבי תחום, סרגל סינון ורשת כרטיסי יוצרים. */
 export function MarketplaceBrowser({
   creators,
   categories,
+  openCampaigns,
 }: {
   creators: MarketplaceCreator[];
   categories: CategoryOption[];
+  openCampaigns: OpenCampaign[];
 }) {
   const [filters, setFilters] = useState<MarketplaceFilters>(DEFAULT_MARKETPLACE_FILTERS);
 
@@ -88,7 +91,12 @@ export function MarketplaceBrowser({
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3">
               {visible.map((creator) => (
-                <CreatorCard key={creator.id} creator={creator} categoryLabels={categoryLabels} />
+                <CreatorCard
+                  key={creator.id}
+                  creator={creator}
+                  categoryLabels={categoryLabels}
+                  openCampaigns={openCampaigns}
+                />
               ))}
             </div>
           )}

@@ -85,3 +85,26 @@ export const listBrandCampaigns = cache(async (): Promise<BrandCampaignListItem[
     applicationCount: row._count.applications,
   }));
 });
+
+/** קמפיינים פתוחים להצעות של המפרסם המחובר — לבורר "הזמנה לבריף" */
+export const listBrandOpenCampaigns = cache(
+  async (
+    targetType?: CampaignTargetType,
+  ): Promise<{ id: string; title: string; targetType: CampaignTargetType }[]> => {
+    const ctx = await getBrandContext();
+    if (!ctx) return [];
+
+    const rows = await prisma.campaign.findMany({
+      where: {
+        businessId: ctx.businessId,
+        status: "OPEN_FOR_PITCHES",
+        ...(targetType
+          ? { targetType: targetType === "BOTH" ? undefined : { in: [targetType, "BOTH"] } }
+          : {}),
+      },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, title: true, targetType: true },
+    });
+    return rows;
+  },
+);

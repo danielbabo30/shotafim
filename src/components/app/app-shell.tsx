@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { SidebarContent } from "@/components/app/sidebar-content";
 import { AppTopbar } from "@/components/app/app-topbar";
+import { ReviewPromptDialog } from "@/components/app/review/review-prompt-dialog";
 import type { AppUser } from "@/lib/app-user";
+import type { PendingReviewPrompt } from "@/lib/reviews";
 
 /**
  * מעטפת האזור האישי — סייד-בר קבוע בדסקטופ (בצד ההתחלה = ימין ב-RTL),
@@ -10,14 +12,17 @@ import type { AppUser } from "@/lib/app-user";
 export function AppShell({
   siteName,
   user,
+  reviewPrompt,
   children,
 }: {
   siteName: string;
   user: AppUser;
+  reviewPrompt: PendingReviewPrompt | null;
   children: ReactNode;
 }) {
   return (
     <div className="bg-background min-h-screen">
+      {reviewPrompt && <ReviewPromptDialog prompt={reviewPrompt} mode="auto" />}
       <aside className="border-outline-variant bg-surface-lowest fixed inset-y-0 start-0 z-40 hidden w-60 border-e lg:block">
         <SidebarContent siteName={siteName} activeRole={user.activeRole} />
       </aside>

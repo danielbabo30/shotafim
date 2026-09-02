@@ -1,24 +1,41 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useActionState, useMemo, useRef, useState, useTransition } from "react";
 import { cn } from "@/lib/cn";
-import { SendIcon } from "@/components/marketing/icons";
-import { formatTimecode, SUBMISSION_STATUS_META } from "@/lib/contract-room";
+import { SendIcon, UploadFileIcon, DocumentIcon, DownloadIcon } from "@/components/marketing/icons";
+import {
+  formatTimecode,
+  SUBMISSION_STATUS_META,
+  CONTRACT_ACTION_INITIAL,
+  type ContractParty,
+} from "@/lib/contract-room";
+import { mediaKindFromMime, UPLOAD_ACCEPT, MAX_UPLOAD_MB } from "@/lib/deliverable-upload";
 import type { RoomSubmission } from "@/lib/contracts";
-import { addFeedback, toggleFeedbackResolved } from "@/lib/actions/contract-actions";
+import {
+  addFeedback,
+  toggleFeedbackResolved,
+  submitDeliverable,
+} from "@/lib/actions/contract-actions";
 
 const shortDate = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long" });
 
 export function DeliverableProofer({
   contractId,
   submissions,
+  viewerParty,
+  canSubmit,
   readOnly,
 }: {
   contractId: string;
   submissions: RoomSubmission[];
+  viewerParty: ContractParty;
+  /** הספק יכול להעלות גרסה חדשה כרגע */
+  canSubmit: boolean;
   /** אין הוספה/סימון הערות אחרי אישור סופי */
   readOnly: boolean;
 }) {
+  const isProvider = viewerParty === "provider";
+  const canComment = !isProvider && !readOnly;
   const [activeId, setActiveId] = useState(submissions.at(-1)?.id ?? "");
   const [videoTime, setVideoTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -30,11 +47,18 @@ export function DeliverableProofer({
 
   if (!active) {
     return (
-      <section className="border-outline-variant bg-surface-lowest shadow-ambient-sm rounded-lg border p-8 text-center">
-        <p className="text-on-surface-variant text-sm">היוצר עדיין לא העלה תוצר לבדיקה.</p>
+      <section className="border-outline-variant bg-surface-lowest shadow-ambient-sm flex flex-col gap-4 rounded-lg border p-8">
+        <p className="text-on-surface-variant text-center text-sm">
+          {isProvider ? "טרם העלית תוצר לבדיקה." : "היוצר עדיין לא העלה תוצר לבדיקה."}
+        </p>
+        {isProvider && canSubmit && (
+          <SubmitDeliverableForm contractId={contractId} nextVersion={1} />
+        )}
       </section>
     );
   }
+
+  const kind = mediaKindFromMime(active.mimeType);
 
   const seekTo = (seconds: number) => {
     const el = videoRef.current;
@@ -45,15 +69,40 @@ export function DeliverableProofer({
 
   return (
     <section className="border-outline-variant bg-surface-lowest shadow-ambient-sm flex flex-col overflow-hidden rounded-lg border">
-      {/* וידאו — תצוגה מקדימה של תוצר; אין כתוביות בשלב זה */}
-      <video
-        ref={videoRef}
-        key={active.id}
-        src={active.fileUrl}
-        controls
-        onTimeUpdate={(e) => setVideoTime(e.currentTarget.currentTime)}
-        className="bg-inverse-surface aspect-video w-full"
-      />
+      {/* תצוגת התוצר — לפי סוג הקובץ */}
+      {kind === "video" ? (
+        <video
+          ref={videoRef}
+          key={active.id}
+          src={active.fileUrl}
+          controls
+          onTimeUpdate={(e) => setVideoTime(e.currentTarget.currentTime)}
+          className="bg-inverse-surface aspect-video w-full"
+        />
+      ) : kind === "image" ? (
+        // תוצר פרטי בממדים שרירותיים, מוגש דרך route מאומת — next/image לא רלוונטי כאן
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={active.id}
+          src={active.fileUrl}
+          alt={`תוצר גרסה v${active.version}`}
+          className="bg-surface-container max-h-[28rem] w-full object-contain"
+        />
+      ) : (
+        <div className="bg-surface-container flex flex-col items-center gap-3 p-10 text-center">
+          <DocumentIcon className="text-on-surface-variant size-12" />
+          <p className="text-on-surface text-sm font-medium">{active.fileName ?? "קובץ התוצר"}</p>
+          <a
+            href={active.fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-primary text-on-primary hover:bg-primary-hover inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+          >
+            <DownloadIcon className="size-4" />
+            פתיחה / הורדה
+          </a>
+        </div>
+      )}
 
       {/* טאבים של גרסאות */}
       <div className="border-outline-variant flex gap-1 overflow-x-auto border-b px-3">
@@ -94,22 +143,32 @@ export function DeliverableProofer({
           </p>
         )}
 
-        {!readOnly && (
+        {isProvider && active.status === "REVISION_REQUESTED" && (
+          <p className="bg-error-container text-on-error-container rounded-lg px-3 py-2 text-sm">
+            המפרסם ביקש תיקונים. עיין בהערות למטה והעלה גרסה מעודכנת.
+          </p>
+        )}
+
+        {canComment && (
           <form
             action={addFeedback}
             className="border-outline-variant focus-within:border-primary flex items-center gap-2 rounded-lg border p-2 transition-colors"
           >
             <input type="hidden" name="contractId" value={contractId} />
             <input type="hidden" name="submissionId" value={active.id} />
-            <input type="hidden" name="timestampSeconds" value={Math.floor(videoTime)} />
-            <span className="bg-surface-container text-on-surface-variant shrink-0 rounded px-2 py-1 font-mono text-xs">
-              {formatTimecode(videoTime)}
-            </span>
+            {kind === "video" && (
+              <>
+                <input type="hidden" name="timestampSeconds" value={Math.floor(videoTime)} />
+                <span className="bg-surface-container text-on-surface-variant shrink-0 rounded px-2 py-1 font-mono text-xs">
+                  {formatTimecode(videoTime)}
+                </span>
+              </>
+            )}
             <input
               name="feedbackText"
               required
               autoComplete="off"
-              placeholder="הוסף הערה בנקודת הזמן הזו…"
+              placeholder={kind === "video" ? "הוסף הערה בנקודת הזמן הזו…" : "הוסף הערה…"}
               className="text-on-surface placeholder:text-on-surface-variant min-w-0 flex-1 bg-transparent text-sm focus:outline-none"
             />
             <button
@@ -148,16 +207,121 @@ export function DeliverableProofer({
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-on-surface text-sm">{f.feedbackText}</p>
-                {!readOnly && <ResolveToggle contractId={contractId} feedback={f} />}
-                {readOnly && f.isResolved && (
+                {canComment && <ResolveToggle contractId={contractId} feedback={f} />}
+                {!canComment && f.isResolved && (
                   <span className="text-success mt-1 inline-block text-xs font-medium">טופל ✓</span>
                 )}
               </div>
             </li>
           ))}
         </ul>
+
+        {isProvider && canSubmit && (
+          <div className="border-outline-variant border-t pt-4">
+            <SubmitDeliverableForm contractId={contractId} nextVersion={active.version + 1} />
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+function SubmitDeliverableForm({
+  contractId,
+  nextVersion,
+}: {
+  contractId: string;
+  nextVersion: number;
+}) {
+  const [state, formAction, pending] = useActionState(submitDeliverable, CONTRACT_ACTION_INITIAL);
+  const [mode, setMode] = useState<"file" | "url">("file");
+
+  const inputCls =
+    "border-outline-variant bg-surface-container focus:border-primary text-on-surface w-full rounded-lg border px-3 py-2 text-sm focus:outline-none";
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <h3 className="text-on-surface flex items-center gap-2 text-sm font-bold">
+        <UploadFileIcon className="size-4" />
+        העלאת גרסה v{nextVersion} לבדיקה
+      </h3>
+
+      {state.status !== "idle" && state.message && (
+        <p
+          className={cn(
+            "rounded-lg px-3 py-2 text-sm",
+            state.status === "error"
+              ? "bg-error-container text-on-error-container"
+              : "bg-success-container text-success",
+          )}
+        >
+          {state.message}
+        </p>
+      )}
+
+      {/* בורר: קובץ / קישור */}
+      <div className="border-outline-variant bg-surface-container flex gap-1 rounded-lg border p-1">
+        {(["file", "url"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={cn(
+              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              mode === m
+                ? "bg-surface-lowest text-primary shadow-ambient-sm"
+                : "text-on-surface-variant hover:text-on-surface",
+            )}
+          >
+            {m === "file" ? "העלאת קובץ" : "קישור חיצוני"}
+          </button>
+        ))}
+      </div>
+
+      {mode === "file" ? (
+        <>
+          <input
+            key="file"
+            name="file"
+            type="file"
+            required
+            accept={UPLOAD_ACCEPT}
+            className={cn(
+              inputCls,
+              "file:border-outline-variant file:bg-surface-lowest file:text-on-surface file:me-3 file:rounded file:border file:px-3 file:py-1 file:text-xs",
+            )}
+          />
+          <p className="text-on-surface-variant text-xs">
+            וידאו, תמונה או PDF · עד {MAX_UPLOAD_MB}MB
+          </p>
+        </>
+      ) : (
+        <input
+          key="url"
+          name="fileUrl"
+          type="url"
+          required
+          dir="ltr"
+          placeholder="https://… קישור לקובץ הווידאו / התמונה"
+          className={cn(inputCls, "text-start")}
+        />
+      )}
+
+      <textarea
+        name="notes"
+        rows={2}
+        placeholder="הערות להגשה (אופציונלי) — מה שונה מהגרסה הקודמת…"
+        className={inputCls}
+      />
+      <input type="hidden" name="contractId" value={contractId} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="bg-primary text-on-primary hover:bg-primary-hover h-11 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+      >
+        {pending ? "מעלה…" : "שלח לבדיקת המפרסם"}
+      </button>
+    </form>
   );
 }
 

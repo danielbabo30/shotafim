@@ -26,12 +26,14 @@ export async function BrandDashboard({ user }: { user: AppUser }) {
           icon={<ShieldCheckIcon className="size-5" />}
           iconTone="primary"
           accent
+          href="/dashboard/reports"
           label="תקציב נעול בנאמנות (Escrow)"
           value={formatShekels(kpis.escrowLocked)}
           badge={{ label: `${kpis.escrowDeals} עסקאות מוגנות`, tone: "primary" }}
         />
         <KpiCard
           icon={<MegaphoneIcon className="size-5" />}
+          href="/dashboard/campaigns"
           label="קמפיינים פעילים"
           value={String(kpis.activeCampaigns)}
           hint={kpis.activeCampaignsBreakdown}
@@ -39,6 +41,7 @@ export async function BrandDashboard({ user }: { user: AppUser }) {
         <KpiCard
           icon={<MailIcon className="size-5" />}
           iconTone="warning"
+          href="/dashboard/applications"
           label="הצעות חדשות לבדיקה"
           value={String(kpis.pendingApplications)}
           badge={{ label: "דורש מענה", tone: "warning" }}
@@ -47,6 +50,7 @@ export async function BrandDashboard({ user }: { user: AppUser }) {
           icon={<VerifiedIcon className="size-5" />}
           iconTone="success"
           live
+          href="/dashboard/contracts"
           label="תוצרים שממתינים לאישורכם"
           value={String(kpis.pendingDeliverables)}
           hint={kpis.pendingDeliverablesHint}

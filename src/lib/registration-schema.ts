@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { RegistrationRoleKey } from "@/lib/registration";
+import { adSpaceAssetObjectSchema } from "@/lib/ad-space-asset-form";
 
 /**
  * ולידציה של טופס שלב 3 (הגדרת פרופיל). כל לשונית שולחת את שדותיה עם prefix
@@ -88,25 +89,8 @@ const spaceSchema = z.object({
   contactPhone: reqStr("טלפון איש קשר הוא שדה חובה"),
   billingEmail: emailField,
   billingAddress: reqStr("כתובת רשמית היא שדה חובה"),
-  asset: z.object({
-    title: reqStr("שם הנכס הוא שדה חובה"),
-    type: z.enum([
-      "DIGITAL_BILLBOARD",
-      "STATIC_BILLBOARD",
-      "TRANSIT",
-      "NEWSLETTER",
-      "PODCAST_SPONSORSHIP",
-    ]),
-    description: reqStr("תיאור הנכס הוא שדה חובה"),
-    cityId: optStr,
-    address: optStr,
-    dimensions: optStr,
-    spotLengthSeconds: z.coerce.number().int().min(0).nullable().catch(null),
-    estimatedReach: z.coerce.number().int().min(0).nullable().catch(null),
-    pricingModel: z.enum(["DAILY", "WEEKLY", "MONTHLY", "PER_CPM", "PER_BROADCAST"]),
-    basePriceILS: z.coerce.number({ message: "מחיר בסיס לא תקין" }).min(0, "מחיר בסיס לא תקין"),
-    proofRequirement: z.enum(["PHOTO_CONFIRMATION", "ANALYTICS_REPORT", "SYSTEM_LOG"]),
-  }),
+  // מבנה הנכס — סכמה משותפת עם טופס «הוספת / עריכת נכס» (src/lib/ad-space-asset-form.ts)
+  asset: adSpaceAssetObjectSchema,
 });
 
 export type BrandInput = z.infer<typeof brandSchema>;

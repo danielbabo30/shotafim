@@ -68,6 +68,7 @@ export default async function ReportsPage() {
           value={formatShekels(kpis.escrowLocked)}
           icon={<LockIcon className="size-5" />}
           tone="primary"
+          href="/dashboard/contracts"
           hint={
             <>
               <InfoIcon className="size-4 shrink-0" />
@@ -92,6 +93,7 @@ export default async function ReportsPage() {
           value={formatShekels(kpis.releasedThisMonth)}
           icon={<CheckCircleIcon className="size-5" />}
           tone="success"
+          href="/dashboard/contracts"
           hint={
             <>
               <TrendUpIcon className="size-4 shrink-0" />

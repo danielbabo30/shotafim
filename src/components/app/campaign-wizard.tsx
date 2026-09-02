@@ -303,6 +303,22 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
               />
               <FieldError>{fieldErrors.briefAssetsUrl}</FieldError>
             </div>
+
+            <label className="border-outline-variant bg-surface-container flex items-start gap-3 rounded-lg border p-3">
+              <input
+                type="checkbox"
+                name="hasPhysicalProduct"
+                className="accent-primary mt-0.5 size-4 rounded"
+              />
+              <span className="text-sm">
+                <span className="text-on-surface font-medium">
+                  הקמפיין כולל מוצר פיזי שנשלח ליוצר
+                </span>
+                <span className="text-on-surface-variant mt-0.5 block text-xs">
+                  לאחר אישור ההצעה, היוצר יתבקש לספק כתובת משלוח בחדר העבודה.
+                </span>
+              </span>
+            </label>
           </div>
         </SectionCard>
       </div>

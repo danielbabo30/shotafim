@@ -53,3 +53,6 @@ next-env.d.ts
 
 # Payload local uploads
 /media
+
+# local storage driver (private uploaded files — dev only)
+/.storage

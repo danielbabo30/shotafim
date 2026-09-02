@@ -1,35 +1,45 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { notFound } from "next/navigation";
 import { getContractRoom } from "@/lib/contracts";
-import { CONTRACT_STATUS_META, canApproveContract, canRequestRevision } from "@/lib/contract-room";
+import { getContractReviewContext } from "@/lib/reviews";
+import { getCities } from "@/lib/cities";
+import {
+  CONTRACT_STATUS_META,
+  canApproveContract,
+  canRequestRevision,
+  canFundEscrow,
+  canSubmitDeliverable,
+} from "@/lib/contract-room";
 import { ChevronLeftIcon, ShieldCheckIcon } from "@/components/marketing/icons";
 import { DeliverableProofer } from "@/components/app/contract-room/deliverable-proofer";
 import { EscrowPanel } from "@/components/app/contract-room/escrow-panel";
 import { RoomChat } from "@/components/app/contract-room/room-chat";
+import { ShippingPanel } from "@/components/app/contract-room/shipping-panel";
+import { ReviewPromptDialog } from "@/components/app/review/review-prompt-dialog";
 
 export const metadata: Metadata = { title: "חדר עבודה" };
 
 export default async function ContractRoomPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireActiveUser();
-  if (!user.roleKeys.includes("brand")) redirect("/dashboard");
-
   const { id } = await params;
   const room = await getContractRoom(id);
   if (!room) notFound();
 
+  const reviewContext = room.status === "APPROVED" ? await getContractReviewContext(id) : null;
+  const cities = room.hasPhysicalProduct ? await getCities() : [];
+
+  const isBrand = room.viewerParty === "brand";
   const latest = room.submissions.at(-1) ?? null;
   const latestStatus = latest?.status ?? null;
   const released = room.status === "APPROVED" || room.escrowStatus === "RELEASED_TO_PROVIDER";
 
   const milestones = [
     {
-      label: "הסכם העבודה נכנס לתוקף",
+      label: "התקציב הופקד לנאמנות",
       done: room.escrowFunded || room.status !== "AWAITING_ESCROW",
     },
     {
-      label: latest ? `סקיצה v${latest.version} הועלתה לבדיקה` : "העלאת תוצר לבדיקה",
+      label: latest ? `גרסה v${latest.version} הועלתה לבדיקה` : "העלאת תוצר לבדיקה",
       done: room.submissions.length > 0,
     },
     { label: "אישור סופי של המפרסם ושחרור תשלום", done: room.status === "APPROVED" },
@@ -53,9 +63,9 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-on-surface text-xl font-bold">
-              עבודה מול{" "}
+              {isBrand ? "עבודה מול " : "עבודה עבור "}
               <span className="text-primary">
-                {room.provider.handle ? `@${room.provider.handle}` : room.provider.name}
+                {room.counterparty.handle ? `@${room.counterparty.handle}` : room.counterparty.name}
               </span>
             </h1>
             <span
@@ -65,11 +75,22 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
               הסכם עבודה {room.agreementNumber} · {statusMeta.label}
             </span>
           </div>
+
+          {reviewContext && (
+            <div className="border-outline-variant bg-surface-container flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+              <p className="text-on-surface-variant text-sm">
+                העבודה הסתיימה — נשמח לביקורת שלך על {reviewContext.counterpartyName}.
+              </p>
+              <ReviewPromptDialog prompt={reviewContext} mode="trigger" />
+            </div>
+          )}
         </header>
 
         <DeliverableProofer
           contractId={room.id}
           submissions={room.submissions}
+          viewerParty={room.viewerParty}
+          canSubmit={room.viewerParty === "provider" && canSubmitDeliverable(room.status)}
           readOnly={room.status === "APPROVED"}
         />
       </div>
@@ -77,20 +98,38 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
       <aside className="flex flex-col gap-6 lg:col-span-4">
         <EscrowPanel
           contractId={room.id}
+          viewerParty={room.viewerParty}
           escrowAmountILS={room.escrowAmountILS}
           milestones={milestones}
-          canApprove={canApproveContract(room.status, latestStatus)}
-          canRequestRevision={canRequestRevision(
-            room.status,
-            latestStatus,
-            room.revisionRoundsUsed,
-            room.revisionRoundsMax,
-          )}
+          canFund={isBrand && canFundEscrow(room.status, room.escrowFunded)}
+          canApprove={isBrand && canApproveContract(room.status, latestStatus)}
+          canRequestRevision={
+            isBrand &&
+            canRequestRevision(
+              room.status,
+              latestStatus,
+              room.revisionRoundsUsed,
+              room.revisionRoundsMax,
+            )
+          }
           revisionRoundsLeft={Math.max(0, room.revisionRoundsMax - room.revisionRoundsUsed)}
           released={released}
         />
 
-        <RoomChat contractId={room.id} provider={room.provider} entries={room.threadEntries} />
+        {room.hasPhysicalProduct && (
+          <ShippingPanel
+            contractId={room.id}
+            viewerParty={room.viewerParty}
+            shipping={room.shipping}
+            cities={cities}
+          />
+        )}
+
+        <RoomChat
+          contractId={room.id}
+          counterparty={room.counterparty}
+          entries={room.threadEntries}
+        />
       </aside>
     </div>
   );

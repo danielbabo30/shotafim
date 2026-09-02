@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 type Tone = "primary" | "success" | "neutral";
@@ -19,15 +20,24 @@ export function StatCard({
   icon,
   hint,
   tone = "neutral",
+  href,
 }: {
   label: string;
   value: string;
   icon: ReactNode;
   hint?: ReactNode;
   tone?: Tone;
+  /** יעד ניווט — הופך את הכרטיס כולו ל-<Link> עם הרמה עדינה ב-hover */
+  href?: string;
 }) {
-  return (
-    <div className="border-outline-variant bg-surface-lowest shadow-ambient flex flex-col gap-4 rounded-xl border p-6">
+  const className = cn(
+    "border-outline-variant bg-surface-lowest shadow-ambient group flex flex-col gap-4 rounded-xl border p-6",
+    href &&
+      "hover:shadow-ambient-lg focus-visible:ring-primary transition-all outline-none hover:-translate-y-0.5 focus-visible:ring-2",
+  );
+
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h3 className="text-on-surface-variant text-sm font-medium">{label}</h3>
@@ -44,6 +54,15 @@ export function StatCard({
           {hint}
         </p>
       ) : null}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {body}
+      </Link>
+    );
+  }
+  return <div className={className}>{body}</div>;
 }

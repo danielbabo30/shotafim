@@ -1,28 +1,24 @@
 import "server-only";
 import { cache } from "react";
+import type { CampaignStatus, TransactionType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 /**
- * נתוני לוח-הבקרה של המפרסם.
+ * נתוני לוח-הבקרה של המפרסם — נתונים אמיתיים מ-Prisma (ראה CLAUDE.md §"האזור האישי").
+ * מסונן לפרופיל העסק של המשתמש המחובר. אם עדיין אין פרופיל עסק — הכול אפס/ריק.
  *
- * ⚠️ PLACEHOLDER — שכבת הכסף (Escrow / קמפיינים / תנועות) היא השלב האחרון בתוכנית.
- * כרגע מוחזרים נתוני-דמה קבועים כדי לבנות ולבדוק את ה-UI. כשהמודלים יחוברו,
- * להחליף את גוף הפונקציה בשאילתות Prisma (Campaign / EscrowHold / Transaction /
- * CampaignApplication / DeliverableSubmission) המסוננות לפי המפרסם המחובר —
- * חתימת הפונקציה והטיפוסים אמורים להישאר.
+ * שכבת הכסף (EscrowHold / Transaction) נכתבת ל-DB אבל מעברי הסטטוס עדיין
+ * ידניים/אדמין עד חיבור PSP — הנתונים כאן אמיתיים ככל שהזרימה מילאה אותם.
  */
 
 export type ChipTone = "primary" | "neutral" | "warning" | "success";
 
 export type BrandKpis = {
-  /** תקציב נעול בנאמנות (Escrow) */
   escrowLocked: number;
   escrowDeals: number;
-  /** קמפיינים פעילים */
   activeCampaigns: number;
   activeCampaignsBreakdown: string;
-  /** הצעות חדשות שממתינות למענה */
   pendingApplications: number;
-  /** תוצרים שממתינים לאישור המפרסם */
   pendingDeliverables: number;
   pendingDeliverablesHint: string;
 };
@@ -30,7 +26,6 @@ export type BrandKpis = {
 export type CampaignRow = {
   id: string;
   title: string;
-  /** שורת מטא — יוצרים + תקציב */
   meta: string;
   status: { label: string; tone: ChipTone };
   href: string;
@@ -41,8 +36,9 @@ export type LedgerEntry = {
   direction: "in" | "out";
   title: string;
   timestamp: string;
-  /** סכום התנועה בשקלים (חיובי; הכיוון נקבע ב-direction) */
   amount: number;
+  /** יעד ניווט — חדר העבודה של החוזה הקשור, אם יש */
+  href: string | null;
 };
 
 export type BrandDashboardData = {
@@ -51,71 +47,154 @@ export type BrandDashboardData = {
   ledger: LedgerEntry[];
 };
 
-const PLACEHOLDER: BrandDashboardData = {
+/** ‎₪12,000 — פורמט קצר, ספרות בלבד, ללא אגורות */
+export const formatShekels = (amount: number): string =>
+  `₪${Math.round(amount).toLocaleString("en-US")}`;
+
+const CAMPAIGN_STATUS_META: Record<CampaignStatus, { label: string; tone: ChipTone }> = {
+  DRAFT: { label: "טיוטה", tone: "neutral" },
+  OPEN_FOR_PITCHES: { label: "פתוח להצעות", tone: "success" },
+  IN_PROGRESS: { label: "בהפקה", tone: "primary" },
+  COMPLETED: { label: "הושלם", tone: "neutral" },
+  CANCELLED: { label: "בוטל", tone: "neutral" },
+};
+
+const TXN_TITLE: Record<TransactionType, string> = {
+  ESCROW_DEPOSIT: "הפקדה לחשבון נאמנות",
+  ESCROW_RELEASE: "שחרור תשלום לספק",
+  WITHDRAWAL: "משיכה",
+  PLATFORM_FEE: "עמלת פלטפורמה",
+  REFUND: "החזר לארנק",
+};
+
+const TXN_IN: TransactionType[] = ["ESCROW_DEPOSIT", "REFUND"];
+
+const heDateTime = (d: Date) =>
+  new Intl.DateTimeFormat("he-IL", {
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+
+const EMPTY: BrandDashboardData = {
   kpis: {
-    escrowLocked: 28400,
-    escrowDeals: 3,
-    activeCampaigns: 4,
-    activeCampaignsBreakdown: "2 באוויר, 2 בהפקת תוכן",
-    pendingApplications: 12,
-    pendingDeliverables: 2,
-    pendingDeliverablesHint: "סקיצות v2 מוכנות",
+    escrowLocked: 0,
+    escrowDeals: 0,
+    activeCampaigns: 0,
+    activeCampaignsBreakdown: "אין קמפיינים פעילים",
+    pendingApplications: 0,
+    pendingDeliverables: 0,
+    pendingDeliverablesHint: "אין תוצרים ממתינים",
   },
-  campaigns: [
-    {
-      id: "c1",
-      title: "קמפיין משקאות קיץ 2024",
-      meta: "3 יוצרים • תקציב: ₪15,000",
-      status: { label: "אישור סקיצה סופית", tone: "warning" },
-      href: "/dashboard/campaigns/c1",
-    },
-    {
-      id: "c2",
-      title: "השקת סדרת טיפוח חדשה",
-      meta: "יוצר אחד • תקציב: ₪8,500",
-      status: { label: "ממתין להוכחת שידור", tone: "primary" },
-      href: "/dashboard/campaigns/c2",
-    },
-    {
-      id: "c3",
-      title: "אתגר כושר אביב — ציוד",
-      meta: "בריף פתוח • תקציב משוער: ₪25,000",
-      status: { label: "פתוח להצעות", tone: "success" },
-      href: "/dashboard/campaigns/c3",
-    },
-  ],
-  ledger: [
-    {
-      id: "t1",
-      direction: "in",
-      title: "הפקדה לחשבון נאמנות",
-      timestamp: "היום, 10:45",
-      amount: 4500,
-    },
-    {
-      id: "t2",
-      direction: "out",
-      title: "שחרור תשלום ליוצר",
-      timestamp: "אתמול, 15:20 • ‎@daniel_foodie",
-      amount: 2500,
-    },
-    {
-      id: "t3",
-      direction: "in",
-      title: "הפקדה לחשבון נאמנות",
-      timestamp: "12 באוקטובר, 09:00",
-      amount: 12000,
-    },
-  ],
+  campaigns: [],
+  ledger: [],
 };
 
 export const getBrandDashboardData = cache(
   async (brandUserId: string): Promise<BrandDashboardData> => {
-    void brandUserId; // TODO: שאילתות Prisma מסוננות למפרסם הזה
-    return PLACEHOLDER;
+    const business = await prisma.businessProfile.findUnique({
+      where: { userId: brandUserId },
+      select: { id: true },
+    });
+    if (!business) return EMPTY;
+
+    const bizId = business.id;
+
+    const [escrow, statusGroups, pendingApplications, pendingDeliverables, campaignRows, txns] =
+      await Promise.all([
+        prisma.escrowHold.aggregate({
+          _sum: { amountILS: true },
+          _count: true,
+          where: { status: "HELD", contract: { businessId: bizId } },
+        }),
+        prisma.campaign.groupBy({
+          by: ["status"],
+          where: { businessId: bizId },
+          _count: { _all: true },
+        }),
+        prisma.campaignApplication.count({
+          where: { status: "SUBMITTED", campaign: { businessId: bizId } },
+        }),
+        prisma.deliverableSubmission.count({
+          where: { status: "PENDING_REVIEW", contract: { businessId: bizId } },
+        }),
+        prisma.campaign.findMany({
+          where: { businessId: bizId },
+          orderBy: { updatedAt: "desc" },
+          take: 6,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            totalBudgetILS: true,
+            _count: { select: { applications: true, contracts: true } },
+          },
+        }),
+        prisma.transaction.findMany({
+          where: { userId: brandUserId },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+          select: {
+            id: true,
+            type: true,
+            amountILS: true,
+            createdAt: true,
+            contract: { select: { id: true, provider: { select: { name: true } } } },
+          },
+        }),
+      ]);
+
+    const countBy = (s: CampaignStatus) =>
+      statusGroups.find((g) => g.status === s)?._count._all ?? 0;
+    const open = countBy("OPEN_FOR_PITCHES");
+    const inProgress = countBy("IN_PROGRESS");
+
+    const campaigns: CampaignRow[] = campaignRows.map((c) => {
+      const budget = formatShekels(Number(c.totalBudgetILS));
+      const openish = c.status === "OPEN_FOR_PITCHES" || c.status === "DRAFT";
+      const meta = openish
+        ? `${c._count.applications} הצעות • תקציב: ${budget}`
+        : `${c._count.contracts} ${c._count.contracts === 1 ? "ספק" : "ספקים"} • תקציב: ${budget}`;
+      return {
+        id: c.id,
+        title: c.title,
+        meta,
+        status: CAMPAIGN_STATUS_META[c.status],
+        href: `/dashboard/campaigns/${c.id}`,
+      };
+    });
+
+    const ledger: LedgerEntry[] = txns.map((t) => {
+      const who = t.contract?.provider?.name;
+      return {
+        id: t.id,
+        direction: TXN_IN.includes(t.type) ? "in" : "out",
+        title: TXN_TITLE[t.type] + (who ? ` • ${who}` : ""),
+        timestamp: heDateTime(t.createdAt),
+        amount: Number(t.amountILS),
+        href: t.contract ? `/dashboard/contracts/${t.contract.id}` : null,
+      };
+    });
+
+    return {
+      kpis: {
+        escrowLocked: Number(escrow._sum.amountILS ?? 0),
+        escrowDeals: escrow._count,
+        activeCampaigns: open + inProgress,
+        activeCampaignsBreakdown:
+          open + inProgress === 0
+            ? "אין קמפיינים פעילים"
+            : `${open} פתוחים להצעות, ${inProgress} בהפקה`,
+        pendingApplications,
+        pendingDeliverables,
+        pendingDeliverablesHint:
+          pendingDeliverables === 0
+            ? "אין תוצרים ממתינים"
+            : `${pendingDeliverables} ${pendingDeliverables === 1 ? "תוצר ממתין" : "תוצרים ממתינים"} לבדיקה`,
+      },
+      campaigns,
+      ledger,
+    };
   },
 );
-
-/** ‎₪12,000 — פורמט קצר, ספרות בלבד, ללא אגורות */
-export const formatShekels = (amount: number): string =>
-  `₪${Math.round(amount).toLocaleString("en-US")}`;
