@@ -1,0 +1,88 @@
+.bridgead-wrap {
+  max-width: 780px;
+}
+
+.bridgead-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 24px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 6px;
+}
+.bridgead-status .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c3c4c7;
+  flex: none;
+}
+.bridgead-status.is-ok .dot {
+  background: #00a32a;
+}
+.bridgead-status.is-failed .dot {
+  background: #d63638;
+}
+.bridgead-status.is-checking .dot {
+  background: #dba617;
+}
+.bridgead-status .label {
+  font-weight: 600;
+  flex: 1;
+}
+
+.bridgead-summary {
+  margin-top: 28px;
+}
+.bridgead-summary h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #646970;
+}
+
+.bridgead-programs table,
+.bridgead-orders table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bridgead-programs th,
+.bridgead-programs td,
+.bridgead-orders th,
+.bridgead-orders td {
+  text-align: start;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f1;
+  font-size: 13px;
+}
+.bridgead-programs tr:last-child td,
+.bridgead-orders tr:last-child td {
+  border-bottom: none;
+}
+
+.bridgead-wrap .ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.bridgead-queue {
+  color: #646970;
+  font-size: 12px;
+  margin-top: 20px;
+}
+
+.bridgead-code {
+  direction: ltr;
+  text-align: left;
+  font-family: Menlo, Consolas, monospace;
+  background: #f6f7f7;
+  border: 1px solid #dcdcde;
+  border-radius: 4px;
+  padding: 2px 6px;
+}

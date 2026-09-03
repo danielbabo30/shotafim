@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getContractRoom } from "@/lib/contracts";
 import { getContractReviewContext } from "@/lib/reviews";
 import { getPartnerProgramForContract } from "@/lib/partner-program";
+import { getContractDisputeContext } from "@/lib/disputes";
 import { getCities } from "@/lib/cities";
 import {
   CONTRACT_STATUS_META,
@@ -16,9 +17,11 @@ import { ChevronLeftIcon, ShieldCheckIcon } from "@/components/marketing/icons";
 import { DeliverableProofer } from "@/components/app/contract-room/deliverable-proofer";
 import { EscrowPanel } from "@/components/app/contract-room/escrow-panel";
 import { PartnerProgramPanel } from "@/components/app/contract-room/partner-program-panel";
+import { PartnerDashboard } from "@/components/app/contract-room/partner-dashboard";
 import { RoomChat } from "@/components/app/contract-room/room-chat";
 import { ShippingPanel } from "@/components/app/contract-room/shipping-panel";
 import { ReviewPromptDialog } from "@/components/app/review/review-prompt-dialog";
+import { DisputeButton } from "@/components/app/dispute/dispute-button";
 
 export const metadata: Metadata = { title: "חדר עבודה" };
 
@@ -30,6 +33,7 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
   const reviewContext = room.status === "APPROVED" ? await getContractReviewContext(id) : null;
   const cities = room.hasPhysicalProduct ? await getCities() : [];
   const partnerProgram = await getPartnerProgramForContract(id);
+  const disputeContext = await getContractDisputeContext(id);
 
   const isBrand = room.viewerParty === "brand";
   const latest = room.submissions.at(-1) ?? null;
@@ -100,7 +104,10 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
 
       <aside className="flex flex-col gap-6 lg:col-span-4">
         {partnerProgram ? (
-          <PartnerProgramPanel program={partnerProgram} />
+          <>
+            <PartnerProgramPanel program={partnerProgram} />
+            <PartnerDashboard contractId={room.id} />
+          </>
         ) : (
           <EscrowPanel
             contractId={room.id}
@@ -137,6 +144,10 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
           counterparty={room.counterparty}
           entries={room.threadEntries}
         />
+
+        {disputeContext && (disputeContext.existing || disputeContext.canOpen) && (
+          <DisputeButton contractId={room.id} context={disputeContext} />
+        )}
       </aside>
     </div>
   );

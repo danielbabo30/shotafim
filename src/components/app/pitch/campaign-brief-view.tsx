@@ -114,7 +114,9 @@ export function CampaignBriefView({ brief }: { brief: CampaignBrief }) {
             )}
             <div>
               <dt className="text-on-surface-variant">תחזית רכישות</dt>
-              <dd className="text-on-surface font-medium">{brief.partnerTerms.estimatedPurchases}</dd>
+              <dd className="text-on-surface font-medium">
+                {brief.partnerTerms.estimatedPurchases}
+              </dd>
             </div>
             <div>
               <dt className="text-on-surface-variant">תקופה</dt>

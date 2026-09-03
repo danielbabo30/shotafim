@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { cn } from "@/lib/cn";
-import { CheckCircleIcon, LockIcon, ShieldCheckIcon } from "@/components/marketing/icons";
+import { CheckCircleIcon, LockIcon } from "@/components/marketing/icons";
 import { CONTRACT_ACTION_INITIAL, type ContractParty } from "@/lib/contract-room";
 import { approveAndRelease, requestRevision, fundEscrow } from "@/lib/actions/contract-actions";
 
@@ -198,16 +198,6 @@ export function EscrowPanel({
             )}
           </>
         )}
-
-        <button
-          type="button"
-          disabled
-          title="פנייה לבוררות המערכת — בקרוב"
-          className="text-error mt-1 flex items-center justify-center gap-1.5 text-xs disabled:opacity-60"
-        >
-          <ShieldCheckIcon className="size-3.5" />
-          פתח מחלוקת / פנייה לבוררות המערכת
-        </button>
       </div>
     </div>
   );

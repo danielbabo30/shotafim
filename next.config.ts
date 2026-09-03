@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
     // לפרודקשן עדיף direct-to-blob לקבצים גדולים — ראה src/lib/storage.ts.
     serverActions: { bodySizeLimit: "55mb" },
   },
+  // ה-route של הורדת תוסף ה-WooCommerce קורא את ה-ZIP מ-wp-plugin/dist דרך fs;
+  // ב-Vercel צריך לצרף אותו ל-serverless function של ה-route.
+  outputFileTracingIncludes: {
+    "/api/plugin-download": ["./wp-plugin/dist/**"],
+  },
 };
 
 export default withPayload(nextConfig, { devBundleServerPackages: false });

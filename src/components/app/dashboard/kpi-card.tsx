@@ -81,16 +81,25 @@ export function KpiCard({
           <ChevronLeftIcon
             className={cn(
               "size-5 transition-colors",
-              danger ? "text-error/70 group-hover:text-error" : "text-on-surface-variant group-hover:text-primary",
+              danger
+                ? "text-error/70 group-hover:text-error"
+                : "text-on-surface-variant group-hover:text-primary",
             )}
             aria-hidden
           />
         ) : null}
       </div>
 
-      <p className={cn("mb-1 text-sm", danger ? "text-error" : "text-on-surface-variant")}>{label}</p>
+      <p className={cn("mb-1 text-sm", danger ? "text-error" : "text-on-surface-variant")}>
+        {label}
+      </p>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <p className={cn("font-display text-3xl font-bold", danger ? "text-error" : "text-on-surface")}>
+        <p
+          className={cn(
+            "font-display text-3xl font-bold",
+            danger ? "text-error" : "text-on-surface",
+          )}
+        >
           {value}
         </p>
         {hint && <p className="text-on-surface-variant text-sm">{hint}</p>}

@@ -22,10 +22,7 @@ export function ShippingPanel({
   cities: CityOption[];
 }) {
   const isProvider = viewerParty === "provider";
-  const [state, action, pending] = useActionState(
-    updateContractShipping,
-    CONTRACT_ACTION_INITIAL,
-  );
+  const [state, action, pending] = useActionState(updateContractShipping, CONTRACT_ACTION_INITIAL);
   const [editing, setEditing] = useState(false);
   const showForm = isProvider && (editing || !shipping);
 

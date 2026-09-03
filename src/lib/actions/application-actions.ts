@@ -254,10 +254,10 @@ export async function acceptApplication(formData: FormData): Promise<void> {
       });
 
       // refCode / couponCode ייחודיים — retry קצר על התנגשות @unique
-      let created = false;
-      for (let attempt = 0; attempt < 5 && !created; attempt++) {
+      let program: { id: string } | null = null;
+      for (let attempt = 0; attempt < 5 && !program; attempt++) {
         try {
-          await tx.partnerProgram.create({
+          program = await tx.partnerProgram.create({
             data: {
               contractId: c.id,
               commissionType: terms.commissionType,
@@ -278,14 +278,32 @@ export async function acceptApplication(formData: FormData): Promise<void> {
               payoutCheckpoints: terms.payoutCheckpoints,
               status: "PENDING_DEPOSIT",
             },
+            select: { id: true },
           });
-          created = true;
         } catch (e) {
-          if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && attempt < 4) {
+          if (
+            e instanceof Prisma.PrismaClientKnownRequestError &&
+            e.code === "P2002" &&
+            attempt < 4
+          ) {
             continue;
           }
           throw e;
         }
+      }
+
+      // חומרת תחנות התשלום מתוך מערך התאריכים המנורמל (האחרונה = endDate+14)
+      if (program) {
+        const dates = [...terms.payoutCheckpoints].sort((a, b) => a.getTime() - b.getTime());
+        await tx.payoutCheckpoint.createMany({
+          data: dates.map((d, i) => ({
+            programId: program!.id,
+            sequence: i + 1,
+            isFinal: i === dates.length - 1,
+            scheduledFor: d,
+            status: "SCHEDULED" as const,
+          })),
+        });
       }
 
       // תיעוד הסכמת שני הצדדים להסכם השותפות מבוססת-הביצועים

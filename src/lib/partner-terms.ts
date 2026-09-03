@@ -109,11 +109,7 @@ export const partnerTermsSchema = z
       .trim()
       .min(1, "יש להזין קישור לעמוד היעד")
       .regex(/^https?:\/\/.+/i, "הקישור חייב להתחיל ב-http:// או https://"),
-    couponDiscountPct: z.coerce
-      .number()
-      .min(0, "אחוז לא תקין")
-      .max(100, "עד 100%")
-      .optional(),
+    couponDiscountPct: z.coerce.number().min(0, "אחוז לא תקין").max(100, "עד 100%").optional(),
     // תחנות ביניים בלבד — התחנה האחרונה (סיום + 14) מתווספת אוטומטית ב-normalizeCheckpoints
     payoutCheckpoints: z.array(isoDate).default([]),
     startDate: isoDate,

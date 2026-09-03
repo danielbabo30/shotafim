@@ -70,6 +70,7 @@ const TXN_TITLE: Record<TransactionType, string> = {
   COMMISSION_PAYOUT: "תשלום עמלות בתחנה",
   COMMISSION_REVERSAL: "ביטול עמלה (החזרה)",
   DEPOSIT_REFUND: "החזר יתרת פיקדון",
+  PLATFORM_ABSORPTION: "ספיגת עמלה (פלטפורמה)",
 };
 
 const TXN_IN: TransactionType[] = ["ESCROW_DEPOSIT", "REFUND", "PARTNERSHIP_DEPOSIT"];

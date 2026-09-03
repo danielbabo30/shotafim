@@ -27,6 +27,13 @@ const schema = z.object({
   AUTH_GOOGLE_SECRET: z.string().optional(),
   AUTH_RESEND_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
+
+  // "תשלום פר רכישה" — מנוע המעקב (WP-2)
+  // סוד הצפנה למפתחות ה-API של תוסף ה-WooCommerce (base64 של 32 בייטים). אופציונלי בפיתוח —
+  // בלעדיו הצימוד יכשל עם הודעה ברורה.
+  TRACK_KEY_SECRET: z.string().optional(),
+  // סוד ל-endpoints של ה-cron (Authorization: Bearer). אופציונלי בפיתוח (ראה /api/cron/*).
+  CRON_SECRET: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -44,3 +51,5 @@ export const env = parsed.data;
 export const hasGoogle = Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET);
 /** האם כניסה במייל (Resend) מוגדרת ומוכנה לשימוש */
 export const hasEmail = Boolean(env.AUTH_RESEND_KEY && env.EMAIL_FROM);
+/** האם הצפנת מפתחות תוסף המעקב זמינה */
+export const hasTrackKeySecret = Boolean(env.TRACK_KEY_SECRET);

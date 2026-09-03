@@ -7,7 +7,7 @@ export function BriefMiniCard({ item }: { item: CreatorBriefVM }) {
   return (
     <Link
       href={item.href}
-      className="border-outline-variant bg-surface-lowest shadow-ambient-sm hover:border-primary/40 hover:shadow-ambient focus-visible:ring-primary group flex flex-col gap-3 rounded-xl border p-5 outline-none transition-all hover:-translate-y-0.5 focus-visible:ring-2"
+      className="border-outline-variant bg-surface-lowest shadow-ambient-sm hover:border-primary/40 hover:shadow-ambient focus-visible:ring-primary group flex flex-col gap-3 rounded-xl border p-5 transition-all outline-none hover:-translate-y-0.5 focus-visible:ring-2"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-on-surface text-sm font-bold">{item.brandName}</span>
