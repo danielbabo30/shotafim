@@ -10,6 +10,7 @@ import {
   platformsFromDeliverables,
   type CampaignFormState,
 } from "@/lib/campaign-brief";
+import { normalizeCheckpoints, partnerTermsSchema } from "@/lib/partner-terms";
 
 /**
  * יצירת בריף קמפיין (טיוטה או פרסום להצעות).
@@ -40,6 +41,7 @@ export async function createCampaign(
   const parsed = campaignFormSchema.safeParse({
     intent: formData.get("intent"),
     targetType: formData.get("targetType"),
+    compensationModel: formData.get("compensationModel") ?? "FIXED_FEE",
     title: formData.get("title") ?? "",
     locationId: formData.get("locationId") || undefined,
     description: formData.get("description") ?? "",
@@ -65,6 +67,35 @@ export async function createCampaign(
 
   const data = parsed.data;
 
+  // תנאי שותפות "תשלום פר רכישה" — נדרשים ונשמרים רק כש-compensationModel=REVENUE_SHARE
+  let partnerTerms: ReturnType<typeof partnerTermsSchema.safeParse> | null = null;
+  if (data.compensationModel === "REVENUE_SHARE") {
+    partnerTerms = partnerTermsSchema.safeParse({
+      commissionType: formData.get("commissionType") ?? "",
+      commissionValue: formData.get("commissionValue") ?? "",
+      commissionBasis: formData.get("commissionBasis") ?? "PRE_DISCOUNT",
+      commissionScope: formData.get("commissionScope") ?? "PRODUCT_ONLY",
+      estimatedPurchases: formData.get("estimatedPurchases") ?? "",
+      assumedAovILS: formData.get("assumedAovILS") ?? "",
+      attributionMode: formData.get("attributionMode") ?? "LINK_AND_COUPON",
+      destinationUrl: formData.get("destinationUrl") ?? "",
+      couponDiscountPct: formData.get("couponDiscountPct")
+        ? formData.get("couponDiscountPct")
+        : undefined,
+      payoutCheckpoints: formData.getAll("payoutCheckpoints").map(String).filter(Boolean),
+      startDate: formData.get("partnerStartDate") ?? "",
+      endDate: formData.get("partnerEndDate") ?? "",
+    });
+    if (!partnerTerms.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of partnerTerms.error.issues) {
+        const key = typeof issue.path[0] === "string" ? (issue.path[0] as string) : "_form";
+        fieldErrors[key] ??= issue.message;
+      }
+      return { status: "error", message: "יש לתקן את תנאי השותפות.", fieldErrors };
+    }
+  }
+
   // ודא שהסניף (אם נבחר) באמת שייך לעסק הזה
   let locationId: string | null = null;
   if (data.locationId) {
@@ -82,6 +113,7 @@ export async function createCampaign(
       title: data.title,
       description: data.description,
       targetType: data.targetType,
+      compensationModel: data.compensationModel,
       deliverables: data.deliverables,
       targetPlatforms: platformsFromDeliverables(data.deliverables),
       briefAssetsUrl: data.briefAssetsUrl || null,
@@ -89,6 +121,32 @@ export async function createCampaign(
       totalBudgetILS: new Prisma.Decimal(data.totalBudgetILS),
       endDate: data.endDate ? new Date(data.endDate) : null,
       status: data.intent === "publish" ? "OPEN_FOR_PITCHES" : "DRAFT",
+      ...(partnerTerms?.success
+        ? {
+            partnerTerms: {
+              create: {
+                commissionType: partnerTerms.data.commissionType,
+                commissionValue: new Prisma.Decimal(partnerTerms.data.commissionValue),
+                commissionBasis: partnerTerms.data.commissionBasis,
+                commissionScope: partnerTerms.data.commissionScope,
+                estimatedPurchases: partnerTerms.data.estimatedPurchases,
+                assumedAovILS: new Prisma.Decimal(partnerTerms.data.assumedAovILS),
+                attributionMode: partnerTerms.data.attributionMode,
+                destinationUrl: partnerTerms.data.destinationUrl,
+                couponDiscountPct:
+                  partnerTerms.data.couponDiscountPct != null
+                    ? new Prisma.Decimal(partnerTerms.data.couponDiscountPct)
+                    : null,
+                payoutCheckpoints: normalizeCheckpoints(
+                  partnerTerms.data.payoutCheckpoints,
+                  new Date(partnerTerms.data.endDate),
+                ),
+                startDate: new Date(partnerTerms.data.startDate),
+                endDate: new Date(partnerTerms.data.endDate),
+              },
+            },
+          }
+        : {}),
     },
     select: { id: true },
   });

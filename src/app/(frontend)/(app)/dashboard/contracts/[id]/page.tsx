@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getContractRoom } from "@/lib/contracts";
 import { getContractReviewContext } from "@/lib/reviews";
+import { getPartnerProgramForContract } from "@/lib/partner-program";
 import { getCities } from "@/lib/cities";
 import {
   CONTRACT_STATUS_META,
@@ -14,6 +15,7 @@ import {
 import { ChevronLeftIcon, ShieldCheckIcon } from "@/components/marketing/icons";
 import { DeliverableProofer } from "@/components/app/contract-room/deliverable-proofer";
 import { EscrowPanel } from "@/components/app/contract-room/escrow-panel";
+import { PartnerProgramPanel } from "@/components/app/contract-room/partner-program-panel";
 import { RoomChat } from "@/components/app/contract-room/room-chat";
 import { ShippingPanel } from "@/components/app/contract-room/shipping-panel";
 import { ReviewPromptDialog } from "@/components/app/review/review-prompt-dialog";
@@ -27,6 +29,7 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
 
   const reviewContext = room.status === "APPROVED" ? await getContractReviewContext(id) : null;
   const cities = room.hasPhysicalProduct ? await getCities() : [];
+  const partnerProgram = await getPartnerProgramForContract(id);
 
   const isBrand = room.viewerParty === "brand";
   const latest = room.submissions.at(-1) ?? null;
@@ -96,25 +99,29 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
       </div>
 
       <aside className="flex flex-col gap-6 lg:col-span-4">
-        <EscrowPanel
-          contractId={room.id}
-          viewerParty={room.viewerParty}
-          escrowAmountILS={room.escrowAmountILS}
-          milestones={milestones}
-          canFund={isBrand && canFundEscrow(room.status, room.escrowFunded)}
-          canApprove={isBrand && canApproveContract(room.status, latestStatus)}
-          canRequestRevision={
-            isBrand &&
-            canRequestRevision(
-              room.status,
-              latestStatus,
-              room.revisionRoundsUsed,
-              room.revisionRoundsMax,
-            )
-          }
-          revisionRoundsLeft={Math.max(0, room.revisionRoundsMax - room.revisionRoundsUsed)}
-          released={released}
-        />
+        {partnerProgram ? (
+          <PartnerProgramPanel program={partnerProgram} />
+        ) : (
+          <EscrowPanel
+            contractId={room.id}
+            viewerParty={room.viewerParty}
+            escrowAmountILS={room.escrowAmountILS}
+            milestones={milestones}
+            canFund={isBrand && canFundEscrow(room.status, room.escrowFunded)}
+            canApprove={isBrand && canApproveContract(room.status, latestStatus)}
+            canRequestRevision={
+              isBrand &&
+              canRequestRevision(
+                room.status,
+                latestStatus,
+                room.revisionRoundsUsed,
+                room.revisionRoundsMax,
+              )
+            }
+            revisionRoundsLeft={Math.max(0, room.revisionRoundsMax - room.revisionRoundsUsed)}
+            released={released}
+          />
+        )}
 
         {room.hasPhysicalProduct && (
           <ShippingPanel

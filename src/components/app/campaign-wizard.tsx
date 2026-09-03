@@ -1,7 +1,15 @@
 "use client";
 
 import { useActionState, useId, useMemo, useState, type ReactNode } from "react";
-import { CampaignTargetType, type DeliverableType } from "@prisma/client";
+import {
+  AttributionMode,
+  CampaignTargetType,
+  CommissionBasis,
+  CommissionScope,
+  CommissionType,
+  type CompensationModel,
+  type DeliverableType,
+} from "@prisma/client";
 import { cn } from "@/lib/cn";
 import {
   CAMPAIGN_FORM_INITIAL,
@@ -10,20 +18,23 @@ import {
   deliverableLabel,
   targetTypeLabel,
 } from "@/lib/campaign-brief";
+import {
+  ATTRIBUTION_MODE_LABEL,
+  COMMISSION_BASIS_LABEL,
+  COMMISSION_SCOPE_LABEL,
+  COMMISSION_TYPE_LABEL,
+  COMPENSATION_MODEL_OPTIONS,
+  attributionModeHasCoupon,
+} from "@/lib/partner-terms";
 import { createCampaign } from "@/lib/actions/campaign-actions";
 import { ShieldCheckIcon, CheckIcon } from "@/components/marketing/icons";
 
 type StepId = 1 | 2 | 3;
 
-const STEPS: { id: StepId; label: string }[] = [
-  { id: 1, label: "הגדרות בסיס" },
-  { id: 2, label: "תוצרים ותקציב" },
-  { id: 3, label: "הפקדת Escrow" },
-];
-
 /** באיזה שלב יושב כל שדה — לקפיצה אוטומטית לשגיאה הראשונה */
 const FIELD_STEP: Record<string, StepId> = {
   targetType: 1,
+  compensationModel: 1,
   title: 1,
   locationId: 1,
   description: 1,
@@ -31,6 +42,17 @@ const FIELD_STEP: Record<string, StepId> = {
   deliverables: 2,
   totalBudgetILS: 2,
   endDate: 2,
+  commissionType: 3,
+  commissionValue: 3,
+  commissionBasis: 3,
+  commissionScope: 3,
+  estimatedPurchases: 3,
+  assumedAovILS: 3,
+  attributionMode: 3,
+  destinationUrl: 3,
+  couponDiscountPct: 3,
+  payoutCheckpoints: 3,
+  startDate: 3,
 };
 
 const fieldClass =
@@ -57,6 +79,8 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
   const uid = useId();
 
   const [targetType, setTargetType] = useState<CampaignTargetType>(CampaignTargetType.CREATOR);
+  const [compensationModel, setCompensationModel] = useState<CompensationModel>("FIXED_FEE");
+  const isRevShare = compensationModel === "REVENUE_SHARE";
   const [title, setTitle] = useState("");
   const [locationId, setLocationId] = useState("");
   const [description, setDescription] = useState("");
@@ -64,6 +88,26 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
   const [deliverables, setDeliverables] = useState<Set<DeliverableType>>(new Set());
   const [budget, setBudget] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // ── תנאי שותפות "תשלום פר רכישה" (רק כש-isRevShare) ──
+  const [commissionType, setCommissionType] = useState<CommissionType>("PERCENT");
+  const [commissionValue, setCommissionValue] = useState("");
+  const [commissionBasis, setCommissionBasis] = useState<CommissionBasis>("PRE_DISCOUNT");
+  const [commissionScope, setCommissionScope] = useState<CommissionScope>("PRODUCT_ONLY");
+  const [estimatedPurchases, setEstimatedPurchases] = useState("");
+  const [assumedAov, setAssumedAov] = useState("");
+  const [attributionMode, setAttributionMode] = useState<AttributionMode>("LINK_AND_COUPON");
+  const [destinationUrl, setDestinationUrl] = useState("");
+  const [couponDiscountPct, setCouponDiscountPct] = useState("");
+  const [partnerStart, setPartnerStart] = useState("");
+  const [partnerEnd, setPartnerEnd] = useState("");
+  const [interimCheckpoint, setInterimCheckpoint] = useState("");
+
+  const STEPS: { id: StepId; label: string }[] = [
+    { id: 1, label: "הגדרות בסיס" },
+    { id: 2, label: isRevShare ? "תוצרים" : "תוצרים ותקציב" },
+    { id: 3, label: isRevShare ? "תנאי שותפות" : "הפקדת Escrow" },
+  ];
 
   const [stepError, setStepError] = useState<string | null>(null);
   const fieldErrors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
@@ -215,6 +259,52 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
           <FieldError>{fieldErrors.targetType}</FieldError>
         </SectionCard>
 
+        <SectionCard title="מודל התגמול">
+          <div className="grid gap-4 md:grid-cols-3">
+            {COMPENSATION_MODEL_OPTIONS.map((option) => {
+              const checked = compensationModel === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    "relative flex flex-col gap-1 rounded-lg border p-4 transition-all",
+                    option.available ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+                    checked
+                      ? "border-primary bg-surface-low ring-primary ring-1"
+                      : "border-outline-variant bg-surface-lowest hover:border-primary hover:bg-surface-low",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="compensationModel"
+                    value={option.value}
+                    checked={checked}
+                    disabled={!option.available}
+                    onChange={() => setCompensationModel(option.value)}
+                    className="sr-only"
+                  />
+                  {checked && (
+                    <span className="text-primary absolute end-4 top-4">
+                      <CheckIcon className="size-5" />
+                    </span>
+                  )}
+                  <span className="text-on-surface pe-6 text-sm font-bold">{option.title}</span>
+                  <span className="text-on-surface-variant text-xs leading-relaxed">
+                    {option.description}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {isRevShare && (
+            <p className="text-on-surface-variant mt-3 text-xs leading-relaxed">
+              דורש חנות WooCommerce עם תוסף המעקב של BridgeAd. הפיקדון נגזר מתנאי השותפות ומופקד
+              לאחר אישור הצעת יוצר.
+            </p>
+          )}
+          <FieldError>{fieldErrors.compensationModel}</FieldError>
+        </SectionCard>
+
         <SectionCard title="פרטי הבריף והמותג">
           <div className="flex flex-col gap-6">
             <div>
@@ -360,7 +450,7 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
+              <div hidden={isRevShare}>
                 <label
                   htmlFor={`${uid}-budget`}
                   className="text-on-surface mb-2 block text-sm font-medium"
@@ -409,6 +499,12 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
         <SectionCard title="סיכום הבריף">
           <dl className="divide-outline-variant grid divide-y text-sm">
             <SummaryRow term="סוג יעד" detail={targetTypeLabel(targetType)} />
+            <SummaryRow
+              term="מודל תגמול"
+              detail={
+                COMPENSATION_MODEL_OPTIONS.find((o) => o.value === compensationModel)?.title ?? "—"
+              }
+            />
             <SummaryRow term="כותרת" detail={title.trim() || "—"} />
             <SummaryRow
               term="תוצרים"
@@ -418,7 +514,7 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
                   : "—"
               }
             />
-            <SummaryRow term="תקציב" detail={budgetPreview} />
+            {!isRevShare && <SummaryRow term="תקציב" detail={budgetPreview} />}
             <SummaryRow
               term="מועד סיום"
               detail={
@@ -432,19 +528,291 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
           </dl>
         </SectionCard>
 
-        <div className="border-primary/20 bg-surface-low shadow-ambient-sm flex items-start gap-4 rounded-lg border p-5">
-          <ShieldCheckIcon className="text-primary mt-0.5 size-6 shrink-0" />
-          <div className="text-sm leading-relaxed">
-            <p className="text-on-surface font-medium">
-              התקציב יופקד לנאמנות (Escrow) רק לאחר שתאשרו הצעת יוצר ספציפית, וישוחרר רק כשתאשרו את
-              התוצר הסופי.
-            </p>
-            <p className="text-on-surface-variant mt-2">
-              בשלב זה אין חיוב. שמירה כטיוטה שומרת את הבריף לעריכה; פרסום פותח אותו לקבלת הצעות מחיר
-              מיוצרים.
-            </p>
+        {isRevShare ? (
+          <>
+            <SectionCard title="תנאי השותפות">
+              <div className="flex flex-col gap-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-on-surface mb-2 block text-sm font-medium">
+                      סוג עמלה
+                    </label>
+                    <select
+                      name="commissionType"
+                      value={commissionType}
+                      onChange={(e) => setCommissionType(e.target.value as CommissionType)}
+                      className={fieldClass}
+                    >
+                      {Object.values(CommissionType).map((t) => (
+                        <option key={t} value={t}>
+                          {COMMISSION_TYPE_LABEL[t]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`${uid}-cv`}
+                      className="text-on-surface mb-2 block text-sm font-medium"
+                    >
+                      {commissionType === "PERCENT" ? "אחוז מהרכישה (%)" : "סכום קבוע לרכישה (₪)"}
+                    </label>
+                    <input
+                      id={`${uid}-cv`}
+                      name="commissionValue"
+                      type="number"
+                      min={0}
+                      step={commissionType === "PERCENT" ? 0.5 : 5}
+                      inputMode="decimal"
+                      value={commissionValue}
+                      onChange={(e) => setCommissionValue(e.target.value)}
+                      className={fieldClass}
+                    />
+                    <FieldError>{fieldErrors.commissionValue}</FieldError>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-on-surface mb-2 block text-sm font-medium">
+                      בסיס חישוב העמלה
+                    </label>
+                    <select
+                      name="commissionBasis"
+                      value={commissionBasis}
+                      onChange={(e) => setCommissionBasis(e.target.value as CommissionBasis)}
+                      className={fieldClass}
+                    >
+                      {Object.values(CommissionBasis).map((b) => (
+                        <option key={b} value={b}>
+                          {COMMISSION_BASIS_LABEL[b]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-on-surface mb-2 block text-sm font-medium">
+                      היקף העמלה
+                    </label>
+                    <select
+                      name="commissionScope"
+                      value={commissionScope}
+                      onChange={(e) => setCommissionScope(e.target.value as CommissionScope)}
+                      className={fieldClass}
+                    >
+                      {Object.values(CommissionScope).map((s) => (
+                        <option key={s} value={s}>
+                          {COMMISSION_SCOPE_LABEL[s]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor={`${uid}-ep`}
+                      className="text-on-surface mb-2 block text-sm font-medium"
+                    >
+                      תחזית רכישות לתקופה
+                    </label>
+                    <input
+                      id={`${uid}-ep`}
+                      name="estimatedPurchases"
+                      type="number"
+                      min={1}
+                      step={1}
+                      inputMode="numeric"
+                      value={estimatedPurchases}
+                      onChange={(e) => setEstimatedPurchases(e.target.value)}
+                      className={fieldClass}
+                    />
+                    <FieldError>{fieldErrors.estimatedPurchases}</FieldError>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`${uid}-aov`}
+                      className="text-on-surface mb-2 block text-sm font-medium"
+                    >
+                      ערך הזמנה ממוצע בחנות (₪)
+                    </label>
+                    <input
+                      id={`${uid}-aov`}
+                      name="assumedAovILS"
+                      type="number"
+                      min={0}
+                      step={10}
+                      inputMode="decimal"
+                      value={assumedAov}
+                      onChange={(e) => setAssumedAov(e.target.value)}
+                      className={fieldClass}
+                    />
+                    <FieldError>{fieldErrors.assumedAovILS}</FieldError>
+                  </div>
+                </div>
+                <p className="text-on-surface-variant -mt-2 text-xs">
+                  התחזית וערך ההזמנה הממוצע הם הבסיס לחישוב הפיקדון. מומלץ: גודל קהל היוצר × שיעור
+                  המרה × ערך הזמנה ממוצע.
+                </p>
+
+                <div>
+                  <label className="text-on-surface mb-2 block text-sm font-medium">מצב שיוך</label>
+                  <select
+                    name="attributionMode"
+                    value={attributionMode}
+                    onChange={(e) => setAttributionMode(e.target.value as AttributionMode)}
+                    className={fieldClass}
+                  >
+                    {Object.values(AttributionMode).map((m) => (
+                      <option key={m} value={m}>
+                        {ATTRIBUTION_MODE_LABEL[m]}
+                      </option>
+                    ))}
+                  </select>
+                  {attributionMode === "COUPON" && (
+                    <p className="text-on-surface-variant mt-1.5 text-xs">
+                      בקופון בלבד אין נתוני קליקים ושיעור המרה — היוצר יראה הזמנות, הכנסה ועמלה בלבד.
+                    </p>
+                  )}
+                </div>
+
+                {attributionModeHasCoupon(attributionMode) && (
+                  <div>
+                    <label
+                      htmlFor={`${uid}-cd`}
+                      className="text-on-surface mb-2 block text-sm font-medium"
+                    >
+                      הנחת הקופון לקונה (%)
+                    </label>
+                    <input
+                      id={`${uid}-cd`}
+                      name="couponDiscountPct"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      inputMode="numeric"
+                      value={couponDiscountPct}
+                      onChange={(e) => setCouponDiscountPct(e.target.value)}
+                      className={fieldClass}
+                    />
+                    <p className="text-on-surface-variant mt-1.5 text-xs">
+                      הנחה אמיתית שיוצאת מהמרווח שלכם — נפרדת מהעמלה ליוצר.
+                    </p>
+                    <FieldError>{fieldErrors.couponDiscountPct}</FieldError>
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    htmlFor={`${uid}-du`}
+                    className="text-on-surface mb-2 block text-sm font-medium"
+                  >
+                    עמוד יעד באתר
+                  </label>
+                  <input
+                    id={`${uid}-du`}
+                    name="destinationUrl"
+                    type="url"
+                    dir="ltr"
+                    value={destinationUrl}
+                    onChange={(e) => setDestinationUrl(e.target.value)}
+                    placeholder="https://"
+                    className={cn(fieldClass, "text-start")}
+                  />
+                  <FieldError>{fieldErrors.destinationUrl}</FieldError>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor={`${uid}-ps`}
+                      className="text-on-surface mb-2 block text-sm font-medium"
+                    >
+                      תאריך התחלה
+                    </label>
+                    <input
+                      id={`${uid}-ps`}
+                      name="partnerStartDate"
+                      type="date"
+                      value={partnerStart}
+                      onChange={(e) => setPartnerStart(e.target.value)}
+                      className={fieldClass}
+                    />
+                    <FieldError>{fieldErrors.startDate}</FieldError>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`${uid}-pe`}
+                      className="text-on-surface mb-2 block text-sm font-medium"
+                    >
+                      תאריך סיום
+                    </label>
+                    <input
+                      id={`${uid}-pe`}
+                      name="partnerEndDate"
+                      type="date"
+                      value={partnerEnd}
+                      onChange={(e) => setPartnerEnd(e.target.value)}
+                      className={fieldClass}
+                    />
+                    <FieldError>{fieldErrors.endDate}</FieldError>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor={`${uid}-cp`}
+                    className="text-on-surface mb-2 block text-sm font-medium"
+                  >
+                    תחנת תשלום ביניים{" "}
+                    <span className="text-on-surface-variant font-normal">(לא חובה)</span>
+                  </label>
+                  <input
+                    id={`${uid}-cp`}
+                    name="payoutCheckpoints"
+                    type="date"
+                    value={interimCheckpoint}
+                    onChange={(e) => setInterimCheckpoint(e.target.value)}
+                    className={fieldClass}
+                  />
+                  <p className="text-on-surface-variant mt-1.5 text-xs">
+                    התחנה האחרונה נקבעת אוטומטית ל-14 יום אחרי תאריך הסיום (חלון החזרות).
+                  </p>
+                  <FieldError>{fieldErrors.payoutCheckpoints}</FieldError>
+                </div>
+              </div>
+            </SectionCard>
+
+            <div className="border-primary/20 bg-surface-low shadow-ambient-sm flex items-start gap-4 rounded-lg border p-5">
+              <ShieldCheckIcon className="text-primary mt-0.5 size-6 shrink-0" />
+              <div className="text-sm leading-relaxed">
+                <p className="text-on-surface font-medium">
+                  לאחר שתאשרו הצעת יוצר, המערכת תחשב את הפיקדון הנדרש מתנאי השותפות ותנפיק לינק/קופון
+                  ייחודי. הלינק יעלה לאוויר רק לאחר הפקדת הפיקדון.
+                </p>
+                <p className="text-on-surface-variant mt-2">
+                  בשלב זה אין חיוב. שמירה כטיוטה שומרת את הבריף; פרסום פותח אותו להצעות.
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="border-primary/20 bg-surface-low shadow-ambient-sm flex items-start gap-4 rounded-lg border p-5">
+            <ShieldCheckIcon className="text-primary mt-0.5 size-6 shrink-0" />
+            <div className="text-sm leading-relaxed">
+              <p className="text-on-surface font-medium">
+                התקציב יופקד לנאמנות (Escrow) רק לאחר שתאשרו הצעת יוצר ספציפית, וישוחרר רק כשתאשרו
+                את התוצר הסופי.
+              </p>
+              <p className="text-on-surface-variant mt-2">
+                בשלב זה אין חיוב. שמירה כטיוטה שומרת את הבריף לעריכה; פרסום פותח אותו לקבלת הצעות
+                מחיר מיוצרים.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── פעולות ── */}

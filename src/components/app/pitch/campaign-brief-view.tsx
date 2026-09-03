@@ -1,6 +1,11 @@
 import { CampaignStatusBadge } from "@/components/app/campaign-status-badge";
 import { deliverableLabel, targetTypeLabel } from "@/lib/campaign-brief";
 import { formatShekels } from "@/lib/dashboard-brand";
+import {
+  ATTRIBUTION_MODE_LABEL,
+  COMMISSION_BASIS_LABEL,
+  COMMISSION_SCOPE_LABEL,
+} from "@/lib/partner-terms";
 import { CalendarIcon, LinkIcon, LocationIcon, MegaphoneIcon } from "@/components/marketing/icons";
 import type { CampaignBrief } from "@/lib/applications";
 
@@ -70,6 +75,61 @@ export function CampaignBriefView({ brief }: { brief: CampaignBrief }) {
           </div>
         )}
       </dl>
+
+      {brief.compensationModel === "REVENUE_SHARE" && brief.partnerTerms && (
+        <div className="border-outline-variant bg-surface-container flex flex-col gap-2 rounded-lg border p-4">
+          <p className="text-on-surface flex items-center gap-1.5 text-sm font-semibold">
+            <MegaphoneIcon className="size-3.5" />
+            שותפות מבוססת ביצועים — תשלום פר רכישה
+          </p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+            <div>
+              <dt className="text-on-surface-variant">עמלה</dt>
+              <dd className="text-on-surface font-medium">
+                {brief.partnerTerms.commissionType === "PERCENT"
+                  ? `${brief.partnerTerms.commissionValue}% מהרכישה`
+                  : `${formatShekels(brief.partnerTerms.commissionValue)} לרכישה`}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-on-surface-variant">בסיס</dt>
+              <dd className="text-on-surface font-medium">
+                {COMMISSION_BASIS_LABEL[brief.partnerTerms.commissionBasis]} ·{" "}
+                {COMMISSION_SCOPE_LABEL[brief.partnerTerms.commissionScope]}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-on-surface-variant">מצב שיוך</dt>
+              <dd className="text-on-surface font-medium">
+                {ATTRIBUTION_MODE_LABEL[brief.partnerTerms.attributionMode]}
+              </dd>
+            </div>
+            {brief.partnerTerms.couponDiscountPct != null && (
+              <div>
+                <dt className="text-on-surface-variant">הנחת קופון לקונה</dt>
+                <dd className="text-on-surface font-medium">
+                  {brief.partnerTerms.couponDiscountPct}%
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt className="text-on-surface-variant">תחזית רכישות</dt>
+              <dd className="text-on-surface font-medium">{brief.partnerTerms.estimatedPurchases}</dd>
+            </div>
+            <div>
+              <dt className="text-on-surface-variant">תקופה</dt>
+              <dd className="text-on-surface font-medium">
+                {dateFmt.format(brief.partnerTerms.startDate)} –{" "}
+                {dateFmt.format(brief.partnerTerms.endDate)}
+              </dd>
+            </div>
+          </dl>
+          <p className="text-on-surface-variant text-xs">
+            דורש חנות WooCommerce עם תוסף המעקב של BridgeAd. התשלום מנוקז מפיקדון המפרסם לפי מכירות
+            בפועל, ומשולם בתחנות.
+          </p>
+        </div>
+      )}
 
       {brief.hasPhysicalProduct && (
         <p className="border-outline-variant bg-surface-container text-on-surface-variant flex items-start gap-2 rounded-lg border px-3 py-2 text-xs">

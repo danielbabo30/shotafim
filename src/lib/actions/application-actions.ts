@@ -11,6 +11,10 @@ import {
   TARGET_TYPES_FOR_ROLE,
   type ApplicationFormState,
 } from "@/lib/pitch";
+import { PARTNERSHIP_PLATFORM_FEE_PCT, attributionModeHasCoupon } from "@/lib/partner-terms";
+import { computeRequiredDepositILS } from "@/lib/partner-deposit";
+import { generateCouponCode, generateRefCode } from "@/lib/partner-codes";
+import { PARTNERSHIP_AGREEMENT_VERSION } from "@/lib/legal-consent";
 
 /**
  * שלב 6 — הצעות לבריף.
@@ -151,7 +155,17 @@ async function loadOwnedApplication(applicationId: string) {
       requestedStartDate: true,
       requestedEndDate: true,
       campaignId: true,
-      campaign: { select: { id: true, status: true } },
+      applicant: { select: { name: true } },
+      campaign: {
+        select: {
+          id: true,
+          status: true,
+          compensationModel: true,
+          endDate: true,
+          business: { select: { userId: true } },
+          partnerTerms: true,
+        },
+      },
       contract: { select: { id: true } },
     },
   });
@@ -193,6 +207,13 @@ export async function acceptApplication(formData: FormData): Promise<void> {
     }
   }
 
+  const isRevShare = application.campaign.compensationModel === "REVENUE_SHARE";
+  const terms = application.campaign.partnerTerms;
+
+  if (isRevShare && !terms) {
+    throw new Error("לבריף חסרים תנאי שותפות — לא ניתן לאשר הצעת תשלום פר רכישה.");
+  }
+
   const price = Number(application.proposedPriceILS);
   const contract = await prisma.$transaction(async (tx) => {
     await tx.campaignApplication.update({
@@ -208,15 +229,74 @@ export async function acceptApplication(formData: FormData): Promise<void> {
         providerId: application.applicantId,
         pricingPackageId: application.pricingPackageId,
         adSpaceAssetId: application.adSpaceAssetId,
-        agreedPriceILS: new Prisma.Decimal(price),
-        platformFeeILS: new Prisma.Decimal(Math.round(price * PLATFORM_FEE_RATE)),
-        deadline: bookingWindow
-          ? bookingWindow.end
-          : new Date(Date.now() + application.estimatedDeliveryDays * 864e5),
+        compensationModel: application.campaign.compensationModel,
+        agreedPriceILS: new Prisma.Decimal(isRevShare ? 0 : price),
+        platformFeeILS: new Prisma.Decimal(isRevShare ? 0 : Math.round(price * PLATFORM_FEE_RATE)),
+        deadline:
+          isRevShare && terms
+            ? terms.endDate
+            : bookingWindow
+              ? bookingWindow.end
+              : new Date(Date.now() + application.estimatedDeliveryDays * 864e5),
         status: "AWAITING_ESCROW",
       },
       select: { id: true },
     });
+
+    if (isRevShare && terms) {
+      const withCoupon = attributionModeHasCoupon(terms.attributionMode);
+      const requiredDepositILS = computeRequiredDepositILS({
+        commissionType: terms.commissionType,
+        commissionValue: Number(terms.commissionValue),
+        estimatedPurchases: terms.estimatedPurchases,
+        assumedAovILS: Number(terms.assumedAovILS),
+        platformFeePct: PARTNERSHIP_PLATFORM_FEE_PCT,
+      });
+
+      // refCode / couponCode ייחודיים — retry קצר על התנגשות @unique
+      let created = false;
+      for (let attempt = 0; attempt < 5 && !created; attempt++) {
+        try {
+          await tx.partnerProgram.create({
+            data: {
+              contractId: c.id,
+              commissionType: terms.commissionType,
+              commissionValue: terms.commissionValue,
+              commissionBasis: terms.commissionBasis,
+              commissionScope: terms.commissionScope,
+              estimatedPurchases: terms.estimatedPurchases,
+              assumedAovILS: terms.assumedAovILS,
+              requiredDepositILS: new Prisma.Decimal(requiredDepositILS),
+              attributionMode: terms.attributionMode,
+              refCode: generateRefCode(),
+              couponCode: withCoupon ? generateCouponCode(application.applicant.name) : null,
+              couponDiscountPct: terms.couponDiscountPct,
+              destinationUrl: terms.destinationUrl,
+              platformFeePct: new Prisma.Decimal(PARTNERSHIP_PLATFORM_FEE_PCT),
+              startDate: terms.startDate,
+              endDate: terms.endDate,
+              payoutCheckpoints: terms.payoutCheckpoints,
+              status: "PENDING_DEPOSIT",
+            },
+          });
+          created = true;
+        } catch (e) {
+          if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && attempt < 4) {
+            continue;
+          }
+          throw e;
+        }
+      }
+
+      // תיעוד הסכמת שני הצדדים להסכם השותפות מבוססת-הביצועים
+      await tx.legalConsent.createMany({
+        data: [application.campaign.business.userId, application.applicantId].map((userId) => ({
+          userId,
+          documentType: "PARTNERSHIP_AGREEMENT" as const,
+          version: PARTNERSHIP_AGREEMENT_VERSION,
+        })),
+      });
+    }
 
     if (application.adSpaceAssetId && bookingWindow) {
       await tx.adSpaceBooking.create({

@@ -165,6 +165,12 @@ enum TransactionType {
   WITHDRAWAL
   PLATFORM_FEE
   REFUND
+  // תשלום פר רכישה (revenue-share)
+  PARTNERSHIP_DEPOSIT // הפקדת המפרסם לפיקדון השותפות
+  COMMISSION_ACCRUAL // עמלה נצברה מרכישה משויכת
+  COMMISSION_PAYOUT // תשלום בתחנת תשלום לארנק היוצר
+  COMMISSION_REVERSAL // ביטול עמלה בעקבות החזרה
+  DEPOSIT_REFUND // יתרת פיקדון שלא נוצלה חזרה למפרסם
 }
 
 enum TransactionStatus {
@@ -203,6 +209,11 @@ enum NotificationType {
   SUBMISSION_RECEIVED
   REVISION_NEEDED
   PAYMENT_RELEASED
+  // תשלום פר רכישה
+  TRACKING_OFFLINE // תוסף המעקב אינו מדווח
+  DEPOSIT_LOW // פיקדון השותפות חצה את שער ה-80%
+  PARTNERSHIP_PAUSED // הלינק/קופון הושהו
+  COMMISSION_ACCRUED // עמלה חדשה נצברה
 }
 
 enum DisputeReason {
@@ -210,6 +221,11 @@ enum DisputeReason {
   LOW_QUALITY
   BRIEF_DEVIATION
   NON_RESPONSIVE
+  // תשלום פר רכישה
+  UNDERREPORTED_SALES // חשד לדיווח חסר של מכירות
+  FRAUDULENT_ORDERS // חשד להזמנות מזויפות
+  ATTRIBUTION_DISPUTE // חילוקי דעות על שיוך מכירה
+  PLUGIN_NOT_REPORTING // התוסף אינו מדווח כנדרש
 }
 
 enum DisputeStatus {
@@ -230,6 +246,7 @@ enum ConsentDocumentType {
   TERMS_OF_SERVICE
   ESCROW_AGREEMENT
   PRIVACY_POLICY
+  PARTNERSHIP_AGREEMENT // הסכם שותפות מבוססת-ביצועים (תשלום פר רכישה)
 }
 
 enum MediaFileType {
@@ -260,6 +277,97 @@ enum IsraelDistrict {
   JERUSALEM
   HAIFA
   JUDEA_SAMARIA
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  תשלום פר רכישה (revenue-share) — enums
+//  אפיון מלא: Artifact "תשלום פר רכישה". WP-1 = סכמה + הקמת שותפות בלבד.
+// ═══════════════════════════════════════════════════════════════
+
+/// מודל התגמול — מימד נפרד מסוג היעד (יוצר / שטח פרסום).
+enum CompensationModel {
+  FIXED_FEE // קיים — סכום קבוע, Escrow, אבני דרך
+  REVENUE_SHARE // תשלום פר רכישה — עמלה על מכירות
+  HYBRID // v2 — דמי בסיס + עמלה
+}
+
+enum CommissionType {
+  PERCENT
+  FIXED
+}
+
+/// האם העמלה מחושבת לפני או אחרי הנחת הקופון.
+enum CommissionBasis {
+  PRE_DISCOUNT
+  POST_DISCOUNT
+}
+
+/// האם העמלה על מחיר המוצר המופנה בלבד או על כל הסל.
+enum CommissionScope {
+  PRODUCT_ONLY
+  WHOLE_CART
+}
+
+enum AttributionMode {
+  LINK
+  COUPON
+  LINK_AND_COUPON
+}
+
+enum AttributionMethod {
+  COUPON
+  COOKIE
+  MANUAL
+}
+
+enum TopUpMode {
+  MANUAL
+  AUTO
+}
+
+enum ProgramStatus {
+  PENDING_DEPOSIT // הוקם, ממתין להפקדת הפיקדון — הלינק/קופון לא "עולה"
+  ACTIVE
+  GATE_80 // חצה 80% ניצול פיקדון — ממתין להחלטה משותפת
+  PAUSED
+  CLOSED
+}
+
+enum SitePlatform {
+  WOOCOMMERCE
+}
+
+enum SiteStatus {
+  ACTIVE
+  STALE // אין heartbeat > 12 שעות
+  OFFLINE // התראה נורתה
+  DEACTIVATED
+}
+
+enum OrderCommissionStatus {
+  PENDING
+  APPROVED
+  REVERSED
+  PAID
+}
+
+enum CheckpointStatus {
+  SCHEDULED
+  PAID
+  SHORTFALL
+}
+
+enum PluginAlertType {
+  DEACTIVATED
+  HEARTBEAT_ABSENT
+  WEBHOOK_MISMATCH
+}
+
+enum EnforcementType {
+  WARNING
+  FINE
+  SUSPENSION
+  BAN
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -312,6 +420,10 @@ model User {
   disputeMessages      DisputeMessage[]
   reportsMade          UserBlockReport[]         @relation("BlockReporter")
   reportsReceived      UserBlockReport[]         @relation("BlockReported")
+
+  enforcementActionsReceived EnforcementAction[] @relation("EnforcementTarget")
+  enforcementActionsIssued   EnforcementAction[] @relation("EnforcementIssuer")
+  declaredMaintenanceWindows MaintenanceWindow[]
 
   @@index([status])
   @@index([deletedAt])
@@ -385,11 +497,12 @@ model BusinessProfile {
   updatedAt          DateTime           @updatedAt
   deletedAt          DateTime?
 
-  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  locations  BusinessLocation[]
-  categories BusinessCategory[]
-  campaigns  Campaign[]
-  contracts  Contract[]
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations    BusinessLocation[]
+  categories   BusinessCategory[]
+  campaigns    Campaign[]
+  contracts    Contract[]
+  trackedSites TrackedSite[]
 
   @@index([verificationStatus])
   @@index([status])
@@ -634,6 +747,7 @@ model Campaign {
   deliverables       DeliverableType[] // תוצרים מבוקשים מהבריף
   briefAssetsUrl     String? // קישור לחומרי גלם / מיתוג
   hasPhysicalProduct Boolean            @default(false) // מוצר פיזי שנשלח ליוצר → הוא יתבקש כתובת משלוח
+  compensationModel  CompensationModel  @default(FIXED_FEE) // FIXED_FEE / REVENUE_SHARE — נקבע בבריף
   totalBudgetILS     Decimal            @db.Decimal(12, 2)
   startDate          DateTime?
   endDate            DateTime?
@@ -647,6 +761,7 @@ model Campaign {
   contracts     Contract[]
   categories    CampaignCategory[]
   conversations Conversation[]
+  partnerTerms  CampaignPartnerTerms?
 
   @@index([businessId])
   @@index([status])
@@ -683,21 +798,22 @@ model CampaignApplication {
 
 /// הסכם עבודה מחייב לקמפיין.
 model Contract {
-  id                 String         @id @default(cuid())
+  id                 String            @id @default(cuid())
   campaignId         String
-  applicationId      String?        @unique
+  applicationId      String?           @unique
   businessId         String
   providerId         String // User.id של היוצר / בעל השטח שנבחר
   pricingPackageId   String?
   adSpaceAssetId     String?
-  agreedPriceILS     Decimal        @db.Decimal(12, 2)
-  platformFeeILS     Decimal        @db.Decimal(12, 2)
+  agreedPriceILS     Decimal           @db.Decimal(12, 2)
+  platformFeeILS     Decimal           @db.Decimal(12, 2)
+  compensationModel  CompensationModel @default(FIXED_FEE) // מועתק מהקמפיין בעת האישור
   deadline           DateTime
-  status             ContractStatus @default(AWAITING_ESCROW)
-  revisionRoundsMax  Int            @default(2) // מכסת סבבי תיקונים בהסכם
-  revisionRoundsUsed Int            @default(0)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  status             ContractStatus    @default(AWAITING_ESCROW)
+  revisionRoundsMax  Int               @default(2) // מכסת סבבי תיקונים בהסכם
+  revisionRoundsUsed Int               @default(0)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
   completedAt        DateTime?
 
   campaign       Campaign               @relation(fields: [campaignId], references: [id])
@@ -707,16 +823,17 @@ model Contract {
   pricingPackage CreatorPricingPackage? @relation(fields: [pricingPackageId], references: [id])
   adSpaceAsset   AdSpaceAsset?          @relation(fields: [adSpaceAssetId], references: [id])
 
-  escrowHold    EscrowHold?
-  shipping      ContractShipping?
-  bookings      AdSpaceBooking[]
-  submissions   DeliverableSubmission[]
-  proofs        ProofOfPlay[]
-  transactions  Transaction[]
-  dispute       Dispute?
-  reviews       Review[]
-  reviewPrompts ReviewPrompt[]
-  conversations Conversation[]
+  escrowHold     EscrowHold?
+  shipping       ContractShipping?
+  bookings       AdSpaceBooking[]
+  submissions    DeliverableSubmission[]
+  proofs         ProofOfPlay[]
+  transactions   Transaction[]
+  dispute        Dispute?
+  reviews        Review[]
+  reviewPrompts  ReviewPrompt[]
+  conversations  Conversation[]
+  partnerProgram PartnerProgram?
 
   @@index([campaignId])
   @@index([businessId])
@@ -977,10 +1094,11 @@ model Dispute {
   updatedAt       DateTime      @updatedAt
   resolvedAt      DateTime?
 
-  contract   Contract         @relation(fields: [contractId], references: [id])
-  initiator  User             @relation("DisputeInitiator", fields: [initiatorId], references: [id])
-  arbitrator User?            @relation("DisputeArbitrator", fields: [arbitratorId], references: [id])
-  messages   DisputeMessage[]
+  contract           Contract            @relation(fields: [contractId], references: [id])
+  initiator          User                @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  arbitrator         User?               @relation("DisputeArbitrator", fields: [arbitratorId], references: [id])
+  messages           DisputeMessage[]
+  enforcementActions EnforcementAction[]
 
   @@index([status])
 }
@@ -1094,4 +1212,210 @@ model UserBlockReport {
 
   @@index([reportedUserId])
   @@index([status])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  תשלום פר רכישה (revenue-share) — מודלים
+//  WP-1: הסכמה מלאה + הקמת שותפות. מנוע השיוך/הכסף, ה-endpoints,
+//  הדשבורדים והתוסף — WP-2+. מודלים ריקים בשלב זה זה בסדר.
+// ═══════════════════════════════════════════════════════════════
+
+/// תנאי שותפות מבוססת-ביצועים שהמפרסם מצהיר בבריף (הצעה; בלי נגד-הצעה ב-WP-1).
+/// מועתקים ל-PartnerProgram ונעולים בעת acceptApplication.
+model CampaignPartnerTerms {
+  id                 String          @id @default(cuid())
+  campaignId         String          @unique
+  commissionType     CommissionType
+  commissionValue    Decimal         @db.Decimal(12, 2) // אחוז (0-100) אם PERCENT, ש"ח אם FIXED
+  commissionBasis    CommissionBasis @default(PRE_DISCOUNT)
+  commissionScope    CommissionScope @default(PRODUCT_ONLY)
+  estimatedPurchases Int // תחזית רכישות לתקופה — מוסכמת, עוגן לפיקדון
+  assumedAovILS      Decimal         @db.Decimal(12, 2) // ערך הזמנה ממוצע — עוגן תחזית + בסיס לחישוב פיקדון בעמלת אחוז
+  attributionMode    AttributionMode @default(LINK_AND_COUPON)
+  destinationUrl     String // עמוד היעד באתר המפרסם
+  couponDiscountPct  Decimal?        @db.Decimal(5, 2) // הנחת הקופון לקונה — המפרסם קובע
+  payoutCheckpoints  DateTime[] // תאריכי תחנות תשלום; האחרונה נאכפת ל-endDate+14
+  startDate          DateTime
+  endDate            DateTime
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+/// תוכנית שותפות פעילה — פר חוזה. נוצרת ב-acceptApplication (PENDING_DEPOSIT),
+/// עולה ל-ACTIVE אחרי fundPartnerDeposit. הלינק/קופון לא "עולה" עד ACTIVE.
+model PartnerProgram {
+  id                 String          @id @default(cuid())
+  contractId         String          @unique
+  commissionType     CommissionType
+  commissionValue    Decimal         @db.Decimal(12, 2)
+  commissionBasis    CommissionBasis
+  commissionScope    CommissionScope
+  estimatedPurchases Int
+  assumedAovILS      Decimal         @db.Decimal(12, 2) // מועתק מהתנאים — עוגן תחזית + חישוב פיקדון
+  requiredDepositILS Decimal         @db.Decimal(12, 2)
+  depositHoldId      String? // EscrowHold.id של הפיקדון (reuse התשתית הקיימת)
+  attributionMode    AttributionMode
+  refCode            String          @unique // קוד שיוך קצר וקריא (לינק + זיהוי)
+  couponCode         String?         @unique // קוד קופון ייחודי ליוצר (אם attributionMode כולל COUPON)
+  couponDiscountPct  Decimal?        @db.Decimal(5, 2)
+  destinationUrl     String
+  platformFeePct     Decimal         @db.Decimal(5, 2) // PARTNERSHIP_PLATFORM_FEE_PCT בעת ההקמה
+  startDate          DateTime
+  endDate            DateTime
+  payoutCheckpoints  DateTime[]
+  topUpMode          TopUpMode       @default(MANUAL)
+  status             ProgramStatus   @default(PENDING_DEPOSIT)
+  pausedAt           DateTime?
+  pauseReason        String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  contract    Contract           @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  clicks      AffiliateClick[]
+  orders      AttributedOrder[]
+  checkpoints PayoutCheckpoint[]
+  alerts      PluginAlert[]
+
+  @@index([status])
+}
+
+/// אתר WooCommerce מצומד לתוסף המעקב.
+model TrackedSite {
+  id              String       @id @default(cuid())
+  businessId      String
+  siteUrl         String
+  platform        SitePlatform @default(WOOCOMMERCE)
+  apiKeyHash      String // hash של מפתח ה-API שנוצר בדשבורד
+  status          SiteStatus   @default(ACTIVE)
+  lastHeartbeatAt DateTime?
+  pluginVersion   String?
+  wooVersion      String?
+  pairedAt        DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  business           BusinessProfile     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  attributedOrders   AttributedOrder[]
+  maintenanceWindows MaintenanceWindow[]
+  pluginAlerts       PluginAlert[]
+
+  @@unique([businessId, siteUrl])
+  @@index([status])
+}
+
+/// קליק על לינק שיוך — נדגם server-side ע"י התוסף.
+model AffiliateClick {
+  id         String   @id @default(cuid())
+  programId  String
+  occurredAt DateTime
+  landingUrl String
+  ipHash     String
+  country    String?
+  createdAt  DateTime @default(now())
+
+  program PartnerProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId, occurredAt])
+}
+
+/// הזמנה משויכת מדיווח התוסף. מקור האמת לחישוב עמלה (WP-2).
+model AttributedOrder {
+  id                   String                @id @default(cuid())
+  programId            String
+  siteId               String
+  externalOrderId      String
+  orderPlacedAt        DateTime
+  currency             String                @default("ILS")
+  grossAmount          Decimal               @db.Decimal(12, 2)
+  commissionableAmount Decimal               @db.Decimal(12, 2) // לפי commissionBasis + commissionScope
+  couponCodes          String[]
+  attributionMethod    AttributionMethod
+  customerHash         String
+  isNewCustomer        Boolean               @default(true)
+  status               OrderCommissionStatus @default(PENDING)
+  commissionAmount     Decimal               @db.Decimal(12, 2)
+  platformFeeAmount    Decimal               @db.Decimal(12, 2)
+  reversedAt           DateTime?
+  reversalReason       String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  program PartnerProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  site    TrackedSite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, externalOrderId])
+  @@index([programId, status])
+}
+
+/// תחנת תשלום — משחררת 100% מהעמלות המאושרות מאז התחנה הקודמת (בלי ריטנשן).
+model PayoutCheckpoint {
+  id                 String           @id @default(cuid())
+  programId          String
+  scheduledFor       DateTime
+  status             CheckpointStatus @default(SCHEDULED)
+  grossCommissionILS Decimal          @default(0) @db.Decimal(12, 2)
+  reversalsILS       Decimal          @default(0) @db.Decimal(12, 2)
+  paidILS            Decimal          @default(0) @db.Decimal(12, 2)
+  paidAt             DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  program PartnerProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([status, scheduledFor])
+}
+
+/// חלון תחזוקה מוצהר מראש — היעדרות heartbeat בתוכו לא מפעילה התראה.
+model MaintenanceWindow {
+  id               String   @id @default(cuid())
+  siteId           String
+  startsAt         DateTime
+  endsAt           DateTime
+  note             String?
+  declaredByUserId String
+  createdAt        DateTime @default(now())
+
+  site           TrackedSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  declaredByUser User        @relation(fields: [declaredByUserId], references: [id])
+
+  @@index([siteId, startsAt])
+}
+
+/// התראת ניטור תוסף.
+model PluginAlert {
+  id           String          @id @default(cuid())
+  siteId       String
+  programId    String?
+  type         PluginAlertType
+  detectedAt   DateTime        @default(now())
+  resolvedAt   DateTime?
+  autoPausedAt DateTime?
+
+  site    TrackedSite     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  program PartnerProgram? @relation(fields: [programId], references: [id])
+
+  @@index([siteId])
+  @@index([type])
+}
+
+/// פעולת אכיפה מנהלתית — מתחברת ל-User.status ומורידה reliabilityScore.
+model EnforcementAction {
+  id              String          @id @default(cuid())
+  targetUserId    String
+  type            EnforcementType
+  reason          String
+  disputeId       String?
+  amountILS       Decimal?        @db.Decimal(12, 2) // לקנס
+  issuedByAdminId String
+  expiresAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  target        User     @relation("EnforcementTarget", fields: [targetUserId], references: [id])
+  issuedByAdmin User     @relation("EnforcementIssuer", fields: [issuedByAdminId], references: [id])
+  dispute       Dispute? @relation(fields: [disputeId], references: [id])
+
+  @@index([targetUserId])
+  @@index([type])
 }

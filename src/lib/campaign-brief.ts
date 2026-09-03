@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CampaignTargetType, DeliverableType } from "@prisma/client";
+import { CampaignTargetType, CompensationModel, DeliverableType } from "@prisma/client";
 import type { CampaignStatus } from "@prisma/client";
 
 /**
@@ -72,6 +72,7 @@ export const campaignFormSchema = z
   .object({
     intent: z.enum(["draft", "publish"]),
     targetType: z.enum(CampaignTargetType),
+    compensationModel: z.enum(CompensationModel).default("FIXED_FEE"),
     title: z.string().trim().min(2, "יש להזין כותרת לבריף").max(120, "הכותרת ארוכה מדי"),
     locationId: z.string().trim().max(60).optional(),
     description: z.string().trim().max(4000, "התיאור ארוך מדי").optional().default(""),
@@ -112,7 +113,8 @@ export const campaignFormSchema = z
           message: "בחרו לפחות תוצר אחד",
         });
       }
-      if (v.totalBudgetILS <= 0) {
+      // בשותפות מבוססת-ביצועים אין תקציב קבוע מראש — הפיקדון נגזר מתנאי השותפות.
+      if (v.compensationModel !== "REVENUE_SHARE" && v.totalBudgetILS <= 0) {
         ctx.addIssue({
           code: "custom",
           path: ["totalBudgetILS"],

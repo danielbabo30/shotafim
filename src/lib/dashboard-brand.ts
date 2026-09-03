@@ -65,9 +65,14 @@ const TXN_TITLE: Record<TransactionType, string> = {
   WITHDRAWAL: "משיכה",
   PLATFORM_FEE: "עמלת פלטפורמה",
   REFUND: "החזר לארנק",
+  PARTNERSHIP_DEPOSIT: "הפקדת פיקדון שותפות",
+  COMMISSION_ACCRUAL: "צבירת עמלה מרכישה",
+  COMMISSION_PAYOUT: "תשלום עמלות בתחנה",
+  COMMISSION_REVERSAL: "ביטול עמלה (החזרה)",
+  DEPOSIT_REFUND: "החזר יתרת פיקדון",
 };
 
-const TXN_IN: TransactionType[] = ["ESCROW_DEPOSIT", "REFUND"];
+const TXN_IN: TransactionType[] = ["ESCROW_DEPOSIT", "REFUND", "PARTNERSHIP_DEPOSIT"];
 
 const heDateTime = (d: Date) =>
   new Intl.DateTimeFormat("he-IL", {

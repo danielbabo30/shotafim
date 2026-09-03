@@ -2,8 +2,13 @@ import "server-only";
 import { cache } from "react";
 import type {
   ApplicationStatus,
+  AttributionMode,
   CampaignStatus,
   CampaignTargetType,
+  CommissionBasis,
+  CommissionScope,
+  CommissionType,
+  CompensationModel,
   DeliverableType,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -49,9 +54,25 @@ export type CampaignBrief = {
   status: CampaignStatus;
   briefAssetsUrl: string | null;
   hasPhysicalProduct: boolean;
+  compensationModel: CompensationModel;
+  /** תנאי שותפות "תשלום פר רכישה" — קיים רק כש-compensationModel=REVENUE_SHARE */
+  partnerTerms: CampaignPartnerTermsSummary | null;
   businessName: string;
   locationLabel: string | null;
   createdAt: Date;
+};
+
+export type CampaignPartnerTermsSummary = {
+  commissionType: CommissionType;
+  commissionValue: number;
+  commissionBasis: CommissionBasis;
+  commissionScope: CommissionScope;
+  estimatedPurchases: number;
+  assumedAovILS: number;
+  attributionMode: AttributionMode;
+  couponDiscountPct: number | null;
+  startDate: Date;
+  endDate: Date;
 };
 
 export type PitchPrefill = {
@@ -207,6 +228,21 @@ export const getCampaignDetail = cache(
         status: true,
         briefAssetsUrl: true,
         hasPhysicalProduct: true,
+        compensationModel: true,
+        partnerTerms: {
+          select: {
+            commissionType: true,
+            commissionValue: true,
+            commissionBasis: true,
+            commissionScope: true,
+            estimatedPurchases: true,
+            assumedAovILS: true,
+            attributionMode: true,
+            couponDiscountPct: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
         createdAt: true,
         business: { select: { userId: true, name: true } },
         location: { select: { name: true, address: true } },
@@ -245,6 +281,24 @@ export const getCampaignDetail = cache(
       status: campaign.status,
       briefAssetsUrl: campaign.briefAssetsUrl,
       hasPhysicalProduct: campaign.hasPhysicalProduct,
+      compensationModel: campaign.compensationModel,
+      partnerTerms: campaign.partnerTerms
+        ? {
+            commissionType: campaign.partnerTerms.commissionType,
+            commissionValue: Number(campaign.partnerTerms.commissionValue),
+            commissionBasis: campaign.partnerTerms.commissionBasis,
+            commissionScope: campaign.partnerTerms.commissionScope,
+            estimatedPurchases: campaign.partnerTerms.estimatedPurchases,
+            assumedAovILS: Number(campaign.partnerTerms.assumedAovILS),
+            attributionMode: campaign.partnerTerms.attributionMode,
+            couponDiscountPct:
+              campaign.partnerTerms.couponDiscountPct != null
+                ? Number(campaign.partnerTerms.couponDiscountPct)
+                : null,
+            startDate: campaign.partnerTerms.startDate,
+            endDate: campaign.partnerTerms.endDate,
+          }
+        : null,
       businessName: campaign.business.name,
       locationLabel: campaign.location
         ? campaign.location.name

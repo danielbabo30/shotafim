@@ -12,3 +12,10 @@ export const REGISTRATION_CONSENT_DOCUMENTS: ConsentDocumentType[] = [
   "TERMS_OF_SERVICE",
   "PRIVACY_POLICY",
 ];
+
+/**
+ * גרסת הסכם השותפות מבוססת-הביצועים ("תשלום פר רכישה").
+ * מתועד כ-LegalConsent לשני הצדדים בעת הקמת השותפות (acceptApplication).
+ * מסמך התנאים עצמו יתווסף כדף `legal-pages` ייעודי בהמשך; כאן שומרים את הגרסה.
+ */
+export const PARTNERSHIP_AGREEMENT_VERSION = "v1.0";
