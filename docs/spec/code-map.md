@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-05 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -8,7 +8,7 @@
 | --- | --- |
 | Marketing site + public index | `src/app/(frontend)/(marketing)/**` · `src/components/marketing/**` · `src/components/ui/**` |
 | Private area | `src/app/(frontend)/(app)/dashboard/**` · `src/components/app/**` |
-| Registration + auth | `src/app/(frontend)/(auth)/**` · `src/components/auth/**` · `src/app/api/auth/[...nextauth]/**` · `src/lib/{app-user,auth-helpers}.ts` |
+| Registration + auth | `src/app/(frontend)/(auth)/**` · `src/components/auth/**` · `src/app/api/auth/[...nextauth]/**` · `src/auth.ts` · `src/proxy.ts` (edge guard, ex-`middleware.ts`) · `src/lib/{app-user,auth-helpers}.ts` · `src/app/(frontend)/dev/login/**` (dev-only session bypass) |
 | CMS (Payload) | `src/collections/**` · `src/globals/**` · `src/app/(payload)/**` · `src/lib/{cms,payload}.ts` |
 | Data | `prisma/schema.prisma` · `prisma/migrations/**` · `prisma/seed/**` · `src/seed/**` · `src/payload-types.ts` (manual!) |
 | Money | models `EscrowHold/Transaction/Invoice/AdSpaceBooking/PayoutCheckpoint` · `src/lib/reports.ts` · `src/app/api/cron/{reconcile,checkpoints}/**` |
@@ -33,6 +33,7 @@
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
 
 ## Useful grep terms
+- auth guard layers (edge → session → DB): `proxy.ts` (cookie only) · `requireUser`/`requireRole` (`auth-helpers.ts`, session only) · `requireActiveUser` (`app-user.ts`, real DB gate — see `docs/spec/auth.md` §7)
 - role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
