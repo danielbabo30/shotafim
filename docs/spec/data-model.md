@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-04 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-05 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -20,3 +20,11 @@
 
 ## Status transitions
 _(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+- **`UserStatus`** (see [`auth.md`](auth.md)): `PENDING_ONBOARDING` (adapter default on
+  first sign-in) `→ ACTIVE` (set during registration, spec #2 — not yet documented) `→
+  SUSPENDED`/`BANNED` (admin action, future `admin-dashboard.md`, spec #19 — no code
+  path for this transition found yet in the codebase). `requireActiveUser`
+  (`src/lib/app-user.ts`) hard-blocks sign-in for `SUSPENDED`/`BANNED` and redirects
+  `PENDING_ONBOARDING` users to `/register/roles`. No transition *out of*
+  `SUSPENDED`/`BANNED` exists yet.

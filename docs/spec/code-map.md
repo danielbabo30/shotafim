@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-05 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -37,6 +37,10 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
+- NextAuth config/session shape: `src/auth.ts` · `src/types/next-auth.d.ts`
+- ⚠️ dead guard, do not reuse: `src/lib/auth-helpers.ts` (`requireUser`/`requireRole` —
+  unused, skips onboarding/suspension checks that `requireActiveUser` enforces; see
+  `auth.md` §9-10)
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`
