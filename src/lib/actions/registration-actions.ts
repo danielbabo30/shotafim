@@ -143,15 +143,18 @@ export async function completeRegistration(
             billingAddress: creator.billingAddress,
           },
         });
-        await tx.creatorChannel.createMany({
-          data: creator.channels.map((c) => ({
-            creatorId: prof.id,
-            platform: c.platform,
-            handle: c.handle,
-            channelUrl: c.channelUrl,
-            followersCount: c.followersCount,
-          })),
-        });
+        // ערוצי סושיאל מחוברים דרך OAuth אחרי ההרשמה (עמוד הסיום / הגדרות), לא נקבעים כאן.
+        if (creator.channels.length > 0) {
+          await tx.creatorChannel.createMany({
+            data: creator.channels.map((c) => ({
+              creatorId: prof.id,
+              platform: c.platform,
+              handle: c.handle,
+              channelUrl: c.channelUrl,
+              followersCount: c.followersCount,
+            })),
+          });
+        }
         await tx.creatorCategory.createMany({
           data: creator.categories.map((slug) => ({ creatorId: prof.id, categorySlug: slug })),
         });

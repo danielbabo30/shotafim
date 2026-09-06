@@ -92,10 +92,17 @@ export async function GET(request: NextRequest) {
     const expires = new Date(now.getTime() + SESSION_DAYS * 24 * 60 * 60 * 1000);
     await prisma.session.create({ data: { sessionToken, userId: user.id, expires } });
 
+    // Auth.js משתמש בשם עוגייה עם קידומת __Secure- כש-useSecureCookies פעיל (https/production) —
+    // חייבים להתאים כדי ש-auth() יזהה את העוגייה שנוצרה כאן (ראה src/auth.ts, אין קונפיג cookies
+    // מפורש שם, אז ההתנהגות היא ברירת המחדל של הספרייה לפי סכמת ה-URL).
+    const isSecure = request.nextUrl.protocol === "https:";
+    const cookieName = isSecure ? "__Secure-authjs.session-token" : "authjs.session-token";
+
     const response = NextResponse.redirect(new URL(next, request.url));
-    response.cookies.set("authjs.session-token", sessionToken, {
+    response.cookies.set(cookieName, sessionToken, {
       httpOnly: true,
       sameSite: "lax",
+      secure: isSecure,
       path: "/",
       expires,
     });

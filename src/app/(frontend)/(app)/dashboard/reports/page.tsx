@@ -55,9 +55,9 @@ export default async function ReportsPage() {
             מעקב אחר תקציבים נעולים בנאמנות, שחרור תשלומים וריכוז חשבוניות מס.
           </p>
         </div>
-        <Button className="shrink-0">
+        <Button className="shrink-0" disabled title="בקרוב — בהמתנה לחיבור ספק סליקה (PSP)">
           <PlusIcon className="size-4" />
-          הפקד תקציב לארנק
+          הפקד תקציב לארנק (בקרוב)
         </Button>
       </div>
 
@@ -119,9 +119,14 @@ export default async function ReportsPage() {
             </p>
           </div>
         </div>
-        <Button variant="ghost" className="shrink-0">
+        <Button
+          variant="ghost"
+          className="shrink-0"
+          disabled
+          title="בקרוב — ייצוא קבצים מרוכזים בפיתוח"
+        >
           <DownloadIcon className="size-4" />
-          הורד קובץ מרוכז
+          הורד קובץ מרוכז (בקרוב)
         </Button>
       </div>
     </div>

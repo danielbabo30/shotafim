@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 
 export const metadata: Metadata = {
-  title: "אינדקס",
-  description: "אינדקס ציבורי של שותפים.",
+  title: "אינדקס עסקים | BridgeAd",
+  description: "אינדקס עסקים ציבורי של BridgeAd.",
 };
 
-// עמוד ציבורי — נרנדר בצד שרת (SSG/SSR) לטובת SEO.
+// עמוד ציבורי — placeholder. הפיצ'ר הועבר לאזור האישי (/dashboard/businesses);
+// אינדקס ציבורי יגיע בשלב עתידי.
 export default function ExplorePage() {
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">אינדקס</h1>
-      <p className="text-black/70 dark:text-white/70">
-        כאן יופיע האינדקס הציבורי. התוכן יגיע בשלב הבא, כשנגדיר את מודל הנתונים.
+    <Container className="flex flex-col gap-4 py-12">
+      <h1 className="text-on-surface text-3xl font-bold">אינדקס עסקים</h1>
+      <p className="text-on-surface-variant">
+        אינדקס העסקים הציבורי יגיע בעתיד. בינתיים, משתמשים רשומים יכולים לחפש עסקים דרך האזור האישי.
       </p>
-    </div>
+    </Container>
   );
 }

@@ -4,7 +4,6 @@ import { startTransition, useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { authFieldClass, authLabelClass } from "@/components/auth/form-styles";
-import { SOCIAL_NETWORKS, type SocialNetwork } from "@/components/auth/social-networks";
 import { completeRegistration } from "@/lib/actions/registration-actions";
 import type { CityOption } from "@/lib/cities";
 import {
@@ -16,7 +15,6 @@ import {
   ArrowIcon,
   ChevronDownIcon,
   CheckCircleIcon,
-  CloseIcon,
   UserIcon,
   ShareIcon,
   ScreenIcon,
@@ -482,8 +480,6 @@ function CreatorProfileFields({
   errors: Errors;
 }) {
   const [topics, setTopics] = useState<Set<string>>(new Set());
-  const [channels, setChannels] = useState<string[]>(["YOUTUBE"]);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleTopic = (slug: string) =>
     setTopics((prev) => {
@@ -492,17 +488,6 @@ function CreatorProfileFields({
       else next.add(slug);
       return next;
     });
-
-  const addChannel = (id: string) => {
-    setChannels((prev) => [...prev, id]);
-    setMenuOpen(false);
-  };
-  const removeChannel = (id: string) => setChannels((prev) => prev.filter((c) => c !== id));
-
-  const selectedNetworks = channels
-    .map((id) => SOCIAL_NETWORKS.find((n) => n.id === id))
-    .filter((n): n is SocialNetwork => Boolean(n));
-  const availableNetworks = SOCIAL_NETWORKS.filter((n) => !channels.includes(n.id));
 
   return (
     <div className="border-outline-variant bg-surface-lowest shadow-ambient overflow-hidden rounded-lg border">
@@ -598,120 +583,14 @@ function CreatorProfileFields({
           </Field>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-3">
           <SectionHeading icon={ShareIcon}>חיבור ערוצי סושיאל</SectionHeading>
-          {channels.length === 0 && errors["creator.channels"] && (
-            <p className="text-error text-xs font-medium">{errors["creator.channels"]}</p>
-          )}
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {selectedNetworks.map((net) => (
-              <ChannelCard key={net.id} network={net} onRemove={() => removeChannel(net.id)} />
-            ))}
-          </div>
-
-          {availableNetworks.length > 0 && (
-            <div className="relative inline-block">
-              <button
-                type="button"
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-haspopup="listbox"
-                aria-expanded={menuOpen}
-                className="text-primary hover:text-primary-hover flex items-center gap-1 text-sm font-semibold transition-colors"
-              >
-                <PlusIcon className="size-4" />
-                הוסף ערוץ
-                <ChevronDownIcon
-                  className={cn("size-4 transition-transform", menuOpen && "rotate-180")}
-                />
-              </button>
-              {menuOpen && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="סגור"
-                    className="fixed inset-0 z-10 cursor-default"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <ul
-                    role="listbox"
-                    className="border-outline-variant bg-surface-lowest shadow-ambient-lg absolute z-20 mt-2 w-60 overflow-hidden rounded-lg border py-1"
-                  >
-                    {availableNetworks.map((net) => (
-                      <li key={net.id}>
-                        <button
-                          type="button"
-                          onClick={() => addChannel(net.id)}
-                          className="hover:bg-surface-container flex w-full items-center gap-3 px-3 py-2 text-start text-sm font-medium transition-colors"
-                        >
-                          <span
-                            className={cn(
-                              "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                              net.iconClass,
-                            )}
-                          >
-                            <net.Icon className="size-5" />
-                          </span>
-                          {net.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          )}
+          <p className="text-on-surface-variant text-sm leading-relaxed">
+            מיד בסיום ההרשמה — בעמוד הסיום וגם בכל עת מתוך <strong>הגדרות ← ערוצי סושיאל</strong> —
+            תוכל לחבר את היוטיוב, הפייסבוק והאינסטגרם שלך. הממשק מושך אוטומטית את נתוני הערוץ
+            (עוקבים, צפיות, מעורבות) ומציג אותם כ״מאומת״ למפרסמים. אין הזנה ידנית של מספרים.
+          </p>
         </section>
-      </div>
-    </div>
-  );
-}
-
-function ChannelCard({ network, onRemove }: { network: SocialNetwork; onRemove: () => void }) {
-  return (
-    <div className="border-outline-variant relative flex flex-col gap-3 rounded-md border p-4">
-      <input type="hidden" name="creator.channelPlatform" value={network.id} />
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`הסר ${network.name}`}
-        className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface absolute end-2 top-2 flex size-6 items-center justify-center rounded-full transition-colors"
-      >
-        <CloseIcon className="size-4" />
-      </button>
-      <div className="flex items-center gap-3 pe-6">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
-            network.iconClass,
-          )}
-        >
-          <network.Icon className="size-5" />
-        </span>
-        <div className="text-sm font-semibold">{network.name}</div>
-      </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <input
-          name="creator.channelHandle"
-          type="text"
-          dir="ltr"
-          placeholder="@username"
-          className={cn(authFieldClass, "px-3 py-2 text-start text-sm")}
-        />
-        <input
-          name="creator.channelFollowers"
-          type="number"
-          min={0}
-          placeholder="מס' עוקבים"
-          className={cn(authFieldClass, "px-3 py-2 text-sm")}
-        />
-        <input
-          name="creator.channelUrl"
-          type="url"
-          dir="ltr"
-          placeholder="https://…"
-          className={cn(authFieldClass, "px-3 py-2 text-start text-sm sm:col-span-2")}
-        />
       </div>
     </div>
   );

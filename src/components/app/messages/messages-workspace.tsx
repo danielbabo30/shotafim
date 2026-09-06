@@ -23,12 +23,21 @@ const nextId = () => `local-${++localId}`;
 
 export function MessagesWorkspace({
   conversations: initial,
+  initialSelectedConversationId,
 }: {
   conversations: ConversationSummary[];
+  /** נבחר מראש דרך `?conversation=<id>` (למשל מ"פתח צ'אט" באינדקס הציבורי) */
+  initialSelectedConversationId?: string;
 }) {
   const [conversations, setConversations] = useState(initial);
-  const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
-  const [mobileView, setMobileView] = useState<MobileView>("list");
+  const [selectedId, setSelectedId] = useState<string | null>(
+    (initialSelectedConversationId && initial.some((c) => c.id === initialSelectedConversationId)
+      ? initialSelectedConversationId
+      : initial[0]?.id) ?? null,
+  );
+  const [mobileView, setMobileView] = useState<MobileView>(
+    initialSelectedConversationId ? "thread" : "list",
+  );
   const [filter, setFilter] = useState<MessageFilterKey>("all");
   const [query, setQuery] = useState("");
   const [, startTransition] = useTransition();

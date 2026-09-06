@@ -113,9 +113,14 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
       )}
 
       {/* ערוצים */}
-      {creator.channels.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-on-surface text-lg font-bold">ערוצי סושיאל</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-on-surface text-lg font-bold">ערוצי סושיאל</h2>
+        {creator.channels.length === 0 ? (
+          <p className="border-outline-variant bg-surface-lowest text-on-surface-variant rounded-xl border p-4 text-sm leading-relaxed">
+            היוצר טרם חיבר ערוצי סושיאל. נתוני עוקבים ומעורבות יופיעו כאן לאחר שיחבר את
+            הפלטפורמות שלו.
+          </p>
+        ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {creator.channels.map((ch) => (
               <div
@@ -161,8 +166,8 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* מחירון */}
       {creator.packages.length > 0 && (

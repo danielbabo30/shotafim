@@ -84,6 +84,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
     nav: [
       DASHBOARD,
       { href: "/dashboard/discover", label: "גילוי קמפיינים", icon: "search" },
+      { href: "/dashboard/businesses", label: "חיפוש עסקים", icon: "search" },
       { href: "/dashboard/applications", label: "ההצעות שלי", icon: "inbox" },
       { href: "/dashboard/contracts", label: "חוזים", icon: "contract" },
       { href: "/dashboard/messages", label: "הודעות", icon: "chat" },
@@ -101,6 +102,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
       DASHBOARD,
       { href: "/dashboard/assets", label: "שטחי הפרסום שלי", icon: "screen" },
       { href: "/dashboard/discover", label: "גילוי קמפיינים", icon: "search" },
+      { href: "/dashboard/businesses", label: "חיפוש עסקים", icon: "search" },
       { href: "/dashboard/applications", label: "הצעות שהגשתי", icon: "inbox" },
       { href: "/dashboard/contracts", label: "חוזים", icon: "contract" },
       { href: "/dashboard/bookings", label: "יומן שיבוצים", icon: "calendar" },

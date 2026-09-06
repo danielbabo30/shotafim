@@ -56,3 +56,5 @@ next-env.d.ts
 
 # local storage driver (private uploaded files — dev only)
 /.storage
+
+certificates

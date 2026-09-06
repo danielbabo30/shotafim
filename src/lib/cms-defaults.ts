@@ -37,7 +37,6 @@ export const DEFAULT_NAV_ITEMS: NonNullable<MainNavigation["items"]> = [
       },
     ],
   },
-  { label: "מאגר יוצרים", type: "link", href: "/explore/creators" },
   { label: "מדריכים", type: "link", href: "/guides" },
   { label: "מאמרים", type: "link", href: "/resources/blog" },
   { label: "תמחור", type: "link", href: "/pricing" },

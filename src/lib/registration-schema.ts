@@ -65,6 +65,8 @@ const creatorSchema = z.object({
   bio: reqStr("ביו הוא שדה חובה"),
   billingAddress: optStr,
   categories: z.array(z.string().trim().min(1)).min(1, "יש לבחור לפחות תחום תוכן אחד"),
+  // ערוצי הסושיאל אינם נקבעים בהרשמה — היוצר מחבר אותם דרך OAuth בעמוד סיום ההרשמה
+  // ובמסך ההגדרות (ראה src/components/app/social-connect-grid.tsx). נשאר אופציונלי לתאימות.
   channels: z
     .array(
       z.object({
@@ -77,7 +79,8 @@ const creatorSchema = z.object({
         followersCount: z.coerce.number().int().min(0).catch(0),
       }),
     )
-    .min(1, "יש לחבר לפחות ערוץ אחד"),
+    .optional()
+    .default([]),
 });
 
 const spaceSchema = z.object({

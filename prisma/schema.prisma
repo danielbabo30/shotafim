@@ -582,10 +582,29 @@ model CreatorProfile {
   channels        CreatorChannel[]
   pricingPackages CreatorPricingPackage[]
   categories      CreatorCategory[]
+  socialConsents  CreatorSocialConsent[]
 
   @@index([verificationStatus])
   @@index([status])
   @@index([primaryCityId])
+}
+
+/// הסכמת היוצר להעברת נתונים מרשת חברתית ספציפית (חובה לפני חיבור OAuth).
+/// נשמרת בנפרד מ-CreatorChannel כי היא ניתנת עוד לפני שקיים ערוץ מחובר, ונשמרת
+/// גם אחרי ניתוק (רשומה משפטית של הסכמה — חיבור מחדש לא דורש הסכמה חוזרת).
+model CreatorSocialConsent {
+  id          String         @id @default(cuid())
+  creatorId   String
+  platform    SocialPlatform
+  consentedAt DateTime       @default(now())
+  ipAddress   String? // כתובת ה-IP שממנה ניתנה ההסכמה (x-forwarded-for)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, platform])
+  @@index([creatorId])
 }
 
 /// ערוצי הסושיאל של היוצר (יחס 1:N).
@@ -602,6 +621,12 @@ model CreatorChannel {
   lastSyncedAt      DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+
+  // חיבור OAuth אמיתי לפלטפורמה (יוטיוב וכו') — WP-5
+  externalAccountId   String? // מזהה החשבון בפלטפורמה עצמה (למשל YouTube channel ID), ל-re-sync
+  oauthRefreshTokenEnc String? // טוקן רענון מוצפן (AES-256-GCM — src/lib/oauth-crypto.ts)
+  oauthScope          String? // ה-scope שאושר בזמן ההרשאה
+  oauthTokenUpdatedAt DateTime?
 
   creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 

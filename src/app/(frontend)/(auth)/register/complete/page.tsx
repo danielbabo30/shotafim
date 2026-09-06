@@ -3,7 +3,15 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/app-user";
 import { ROLE_META, type RoleKey } from "@/lib/app-nav";
-import { CheckCircleIcon, CheckIcon, SwapIcon, ArrowIcon } from "@/components/marketing/icons";
+import { buildSocialConnections } from "@/lib/social-connections";
+import { SocialConnectGrid } from "@/components/app/social-connect-grid";
+import {
+  CheckCircleIcon,
+  CheckIcon,
+  SwapIcon,
+  ArrowIcon,
+  ShareIcon,
+} from "@/components/marketing/icons";
 
 export const metadata: Metadata = {
   title: "ההרשמה הושלמה",
@@ -24,10 +32,25 @@ export default async function RegisterCompletePage() {
     where: { id: user.id },
     select: {
       businessProfile: { select: { name: true } },
-      creatorProfile: { select: { displayName: true } },
+      creatorProfile: {
+        select: {
+          displayName: true,
+          channels: {
+            select: { id: true, platform: true, handle: true, followersCount: true, oauthTokenUpdatedAt: true },
+          },
+          socialConsents: { select: { platform: true, consentedAt: true } },
+        },
+      },
       adSpaceOwnerProfile: { select: { companyName: true } },
     },
   });
+
+  const socialConnections = profiles?.creatorProfile
+    ? buildSocialConnections(
+        profiles.creatorProfile.channels,
+        profiles.creatorProfile.socialConsents,
+      )
+    : [];
 
   const roleKeys = user.roleKeys;
   const profileNames = [
@@ -92,6 +115,21 @@ export default async function RegisterCompletePage() {
               תוכל להחליף מצב בכל שלב מתוך סרגל הניווט העליון כדי לעבור בין ניהול בריפים ותקציבים
               לבין צפייה במשימות ובארנק המשיכות.
             </p>
+          </div>
+        )}
+
+        {roleKeys.includes("creator") && (
+          <div className="border-primary/20 bg-primary/5 relative mb-8 space-y-4 rounded-xl border p-6 text-start">
+            <h2 className="text-on-surface flex items-center gap-2 text-sm font-semibold">
+              <ShareIcon className="text-primary size-5" />
+              חבר את הערוצים שלך
+            </h2>
+            <p className="text-on-surface-variant text-sm leading-relaxed">
+              הממשק מושך את נתוני הערוץ (עוקבים, צפיות, מעורבות) ישירות מהפלטפורמה כדי להציג אותם
+              כ״מאומת״ למפרסמים. לפני כל חיבור יש לאשר את תיבת ההסכמה. אפשר גם בהמשך, מתוך הגדרות ←
+              ערוצי סושיאל.
+            </p>
+            <SocialConnectGrid connections={socialConnections} />
           </div>
         )}
 

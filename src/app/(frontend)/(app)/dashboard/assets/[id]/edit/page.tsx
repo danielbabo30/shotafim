@@ -8,6 +8,7 @@ import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
 import { updateAdSpaceAsset } from "@/lib/actions/ad-space-actions";
 import { AssetForm } from "@/components/app/ad-spaces/asset-form";
 import { AssetActiveToggle } from "@/components/app/ad-spaces/asset-active-toggle";
+import { AssetDeleteButton } from "@/components/app/ad-spaces/asset-delete-button";
 import { ArrowIcon } from "@/components/marketing/icons";
 import type { AdSpaceAssetFormValues } from "@/lib/ad-space-asset-form";
 
@@ -17,10 +18,13 @@ const numToStr = (n: number | null | undefined) => (n == null ? "" : String(n));
 
 export default async function EditAdSpaceAssetPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ blocked?: string }>;
 }) {
   const { id } = await params;
+  const { blocked } = await searchParams;
   const user = await requireActiveUser();
   if (!user.roleKeys.includes("space")) redirect("/dashboard");
 
@@ -95,6 +99,8 @@ export default async function EditAdSpaceAssetPage({
         categories={categories.map((c) => ({ slug: c.slug, name: c.name }))}
         initial={initial}
       />
+
+      <AssetDeleteButton assetId={asset.id} blockedByBookings={blocked === "bookings"} />
     </div>
   );
 }

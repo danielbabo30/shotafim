@@ -220,3 +220,49 @@ export async function toggleAdSpaceActive(formData: FormData): Promise<void> {
   // redirect לאותו עמוד — מבטיח רינדור מחדש של המצב (form action בלי redirect לא תמיד מרענן)
   redirect(`/dashboard/assets/${assetId}/edit`);
 }
+
+/**
+ * ארכוב/מחיקת נכס פרסום — soft-delete דרך deletedAt (הנכס נעלם מהקטלוג ומהניהול).
+ * חסום אם יש שריונים פעילים/עתידיים (RESERVED / CONFIRMED שטרם הסתיימו) — כדי לא לשבור חוזים.
+ */
+export async function deleteAdSpaceAsset(formData: FormData): Promise<void> {
+  const owner = await resolveOwner();
+  if (!owner) return;
+
+  const assetId = String(formData.get("assetId") ?? "");
+  if (!assetId) return;
+
+  const existing = await prisma.adSpaceAsset.findFirst({
+    where: { id: assetId, owner: { userId: owner.userId }, deletedAt: null },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          bookings: {
+            where: {
+              status: { in: ["RESERVED", "CONFIRMED", "BROADCASTING"] },
+              endDate: { gte: new Date() },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!existing) return;
+
+  if (existing._count.bookings > 0) {
+    // יש שריון פעיל — לא מוחקים, רק מסתירים מהקטלוג
+    await prisma.adSpaceAsset.update({ where: { id: assetId }, data: { isActive: false } });
+    revalidatePath("/dashboard/assets");
+    redirect(`/dashboard/assets/${assetId}/edit?blocked=bookings`);
+  }
+
+  await prisma.adSpaceAsset.update({
+    where: { id: assetId },
+    data: { deletedAt: new Date(), isActive: false },
+  });
+
+  revalidatePath("/dashboard/assets");
+  revalidatePath("/dashboard/bookings");
+  redirect("/dashboard/assets");
+}

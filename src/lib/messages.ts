@@ -1,18 +1,15 @@
 import "server-only";
 import { cache } from "react";
+import { prisma } from "@/lib/prisma";
 
 /**
  * נתוני מרכז ההודעות של האזור האישי — רשימת שיחות + ה-thread המלא של כל אחת.
  *
- * ⚠️ PLACEHOLDER — המודלים Conversation / ConversationParticipant / Message כבר
- * קיימים בסכמת Prisma, אבל אין להם seed וקמפיינים/חוזים עדיין לא נבנו. כרגע
- * מוחזרות שיחות-דמה קבועות כדי לבנות ולבדוק את ה-UI (כמו dashboard-brand.ts /
- * reports.ts). כשהמודלים יחוברו — להחליף את גוף getMessagesData בשאילתות Prisma
- * המסוננות למשתמש המחובר (conversations → participants → messages, ordered),
- * חתימת הפונקציה והטיפוסים אמורים להישאר.
+ * שליפה אמיתית מ-Prisma: Conversation → participants (מסונן למשתמש המחובר) →
+ * הצד השני + הודעות. תבנית ה-thread תואמת את `getContractRoom` ב-src/lib/contracts.ts.
  */
 
-export type ConversationContextKind = "contract" | "campaign" | "application";
+export type ConversationContextKind = "contract" | "campaign" | "application" | "direct";
 
 export type ConversationContext = {
   kind: ConversationContextKind;
@@ -66,7 +63,6 @@ export type ConversationSummary = {
   /** "14:32" / "אתמול" / "12.05" */
   timeLabel: string;
   unread?: boolean;
-  /** ב-placeholder כל ה-thread נטען מראש */
   entries: ThreadEntry[];
 };
 
@@ -77,106 +73,143 @@ export type MessagesData = {
 /** מפתחות סינון רשימת השיחות */
 export type MessageFilterKey = "all" | "contracts" | "quotes";
 
-const PLACEHOLDER: MessagesData = {
-  conversations: [
-    {
-      id: "conv-daniel",
-      name: "דניאל פודי",
-      handle: "@daniel_foodie",
-      online: true,
-      context: {
-        kind: "contract",
-        label: "השקת תפריט קיץ",
-        workspaceHref: "/dashboard/contracts",
-        escrowAmountILS: 3500,
-      },
-      preview: "שלחתי את הסקיצה השנייה לעיונך, מחכה לפידבק!",
-      timeLabel: "14:32",
-      unread: true,
-      entries: [
-        {
-          type: "system",
-          id: "sys-1",
-          text: "התקציב בסך ₪3,500 ננעל בהצלחה בנאמנות BridgeAd.",
-        },
-        { type: "day", id: "day-1", label: "היום" },
-        {
-          type: "message",
-          id: "m-1",
-          direction: "in",
-          body: "היי! צילמתי את הסרטון לפי הבריף ששלחתם, יצא מדהים. אני שולחת את הסקיצה הראשונה עכשיו.",
-          time: "14:15",
-        },
-        {
-          type: "message",
-          id: "m-2",
-          direction: "in",
-          attachment: {
-            kind: "video",
-            name: "סקיצה_גרסה_2.mp4",
-            meta: "48MB • וידאו",
-          },
-          time: "14:32",
-        },
-        {
-          type: "message",
-          id: "m-3",
-          direction: "out",
-          body: "תודה דניאל! אני אעבור על זה מיד עם הצוות ואחזור אליך עם פידבק מהיר.",
-          time: "14:35",
-          read: true,
-        },
-      ],
-    },
-    {
-      id: "conv-studio",
-      name: "Studio Tel Aviv",
-      context: { kind: "campaign", label: "קמפיין חגים" },
-      preview: "נראה מעולה, נתקדם עם זה.",
-      timeLabel: "אתמול",
-      entries: [
-        { type: "day", id: "day-s1", label: "אתמול" },
-        {
-          type: "message",
-          id: "ms-1",
-          direction: "out",
-          body: "שלחנו הצעת מחיר מעודכנת לקמפיין החגים — מחכים לאישורכם.",
-          time: "11:20",
-          read: true,
-        },
-        {
-          type: "message",
-          id: "ms-2",
-          direction: "in",
-          body: "נראה מעולה, נתקדם עם זה.",
-          time: "17:04",
-        },
-      ],
-    },
-    {
-      id: "conv-ronny",
-      name: "Ronny_Vlogs",
-      handle: "@ronny.vlogs",
-      online: false,
-      preview: "תודה רבה!",
-      timeLabel: "12.05",
-      entries: [
-        { type: "day", id: "day-r1", label: "12 במאי" },
-        {
-          type: "message",
-          id: "mr-1",
-          direction: "out",
-          body: "העברנו את התשלום, נעים לעבוד איתך 🙌",
-          time: "09:12",
-          read: true,
-        },
-        { type: "message", id: "mr-2", direction: "in", body: "תודה רבה!", time: "09:30" },
-      ],
-    },
-  ],
+const timeFmt = new Intl.DateTimeFormat("he-IL", { hour: "2-digit", minute: "2-digit" });
+const dateFmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit" });
+
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/** "היום" / "אתמול" / "12.05" — יחסית להיום */
+function dayLabel(d: Date): string {
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86_400_000);
+  if (diffDays === 0) return "היום";
+  if (diffDays === 1) return "אתמול";
+  return dateFmt.format(d);
+}
+
+/** תווית שעה/יום לשורת התצוגה ברשימת השיחות (כמו וואטסאפ) */
+function listTimeLabel(d: Date): string {
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86_400_000);
+  if (diffDays === 0) return timeFmt.format(d);
+  return dayLabel(d);
+}
+
+type OtherUser = {
+  name: string | null;
+  image: string | null;
+  businessProfile: { name: string } | null;
+  creatorProfile: { displayName: string; channels: { handle: string }[] } | null;
+  adSpaceOwnerProfile: { companyName: string } | null;
 };
 
+function displayNameOf(u: OtherUser): string {
+  return (
+    u.creatorProfile?.displayName ??
+    u.adSpaceOwnerProfile?.companyName ??
+    u.businessProfile?.name ??
+    u.name ??
+    "משתמש BridgeAd"
+  );
+}
+
 export const getMessagesData = cache(async (userId: string): Promise<MessagesData> => {
-  void userId; // TODO: שאילתות Prisma (Conversation → participants → messages) מסוננות למשתמש הזה
-  return PLACEHOLDER;
+  const conversations = await prisma.conversation.findMany({
+    where: { participants: { some: { userId } } },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      updatedAt: true,
+      campaign: { select: { title: true } },
+      contract: {
+        select: {
+          id: true,
+          agreedPriceILS: true,
+          platformFeeILS: true,
+          campaign: { select: { title: true } },
+          escrowHold: { select: { amountILS: true } },
+        },
+      },
+      participants: {
+        select: {
+          userId: true,
+          user: {
+            select: {
+              name: true,
+              image: true,
+              businessProfile: { select: { name: true } },
+              creatorProfile: {
+                select: {
+                  displayName: true,
+                  channels: {
+                    take: 1,
+                    orderBy: { followersCount: "desc" },
+                    select: { handle: true },
+                  },
+                },
+              },
+              adSpaceOwnerProfile: { select: { companyName: true } },
+            },
+          },
+        },
+      },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, senderId: true, body: true, readAt: true, createdAt: true },
+      },
+    },
+  });
+
+  const summaries: ConversationSummary[] = conversations.map((conv) => {
+    const other = conv.participants.find((p) => p.userId !== userId)?.user ?? null;
+    const lastMessage = conv.messages.at(-1) ?? null;
+    const lastActivity = lastMessage?.createdAt ?? conv.updatedAt;
+
+    const context: ConversationContext | undefined = conv.contract
+      ? {
+          kind: "contract",
+          label: conv.contract.campaign.title,
+          workspaceHref: `/dashboard/contracts/${conv.contract.id}`,
+          escrowAmountILS: Number(
+            conv.contract.escrowHold?.amountILS ??
+              Number(conv.contract.agreedPriceILS) + Number(conv.contract.platformFeeILS),
+          ),
+        }
+      : conv.campaign
+        ? { kind: "campaign", label: conv.campaign.title }
+        : { kind: "direct", label: "פנייה ישירה" };
+
+    let lastDay = "";
+    const entries: ThreadEntry[] = [];
+    for (const m of conv.messages) {
+      const label = dayLabel(m.createdAt);
+      if (label !== lastDay) {
+        entries.push({ type: "day", id: `day-${m.id}`, label });
+        lastDay = label;
+      }
+      const outgoing = m.senderId === userId;
+      entries.push({
+        type: "message",
+        id: m.id,
+        direction: outgoing ? "out" : "in",
+        body: m.body,
+        time: timeFmt.format(m.createdAt),
+        read: outgoing ? m.readAt != null : undefined,
+      });
+    }
+
+    const unread = conv.messages.some((m) => m.senderId !== userId && m.readAt == null);
+
+    return {
+      id: conv.id,
+      name: other ? displayNameOf(other) : "משתמש BridgeAd",
+      handle: other?.creatorProfile?.channels[0]?.handle,
+      avatarUrl: other?.image ?? undefined,
+      context,
+      preview: lastMessage?.body ?? "אין הודעות עדיין",
+      timeLabel: listTimeLabel(lastActivity),
+      unread,
+      entries,
+    };
+  });
+
+  return { conversations: summaries };
 });
