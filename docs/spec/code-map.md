@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-06 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -24,7 +24,7 @@
 - **Messaging/disputes:** `messages · disputes`
 - **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr`
 - **CMS/content:** `homepage · posts · guides · legal · legal-pages · solutions-* · how-it-works · contact · company-info · cms · site` (+ `*-defaults.ts`)
-- **Infra:** `app-user · app-nav · auth-helpers · admin-guard · prisma · payload · email · storage · cities · partner-categories-query · legal-consent · registration*`
+- **Infra:** `app-user · app-nav · auth-helpers (dead code, see auth.md §9) · admin-guard · prisma · payload · email · storage · cities · partner-categories-query · legal-consent · registration*`
 
 ## Server actions (`src/lib/actions/`)
 `ad-space · app · application · campaign · contract · dispute · message · partner · plugin · registration · review`
@@ -33,6 +33,7 @@
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
 
 ## Useful grep terms
+- auth: `requireActiveUser` (app) · `requireAdmin` (admin) · `requireRegistrationUser` (wizard) · `src/auth.ts` (NextAuth config) · `dev/login` (dev-only session bypass, 404s outside NODE_ENV=development)
 - role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`

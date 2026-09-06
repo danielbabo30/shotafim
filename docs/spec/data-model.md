@@ -20,3 +20,10 @@
 
 ## Status transitions
 _(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+### `UserStatus` (see `auth.md`)
+- `PENDING_ONBOARDING` (default on create) → `ACTIVE`: only in `completeRegistration()`
+  (`src/lib/actions/registration-actions.ts:96-99`), same transaction as role-specific profile creation.
+- `ACTIVE → SUSPENDED/BANNED`, and `deletedAt` (soft delete): no writer found anywhere in `src/` yet —
+  every auth guard defends against these states but nothing currently produces them (likely admin-dashboard,
+  queue item 19).
