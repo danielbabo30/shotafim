@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-04 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-07 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -19,4 +19,15 @@
 | Infra | `AuditLog · LegalConsent · MediaAttachment` | `ConsentDocumentType · MediaFileType` |
 
 ## Status transitions
-_(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+- **`UserStatus`** (`schema.prisma:34-39`, see `auth.md` §5,§8): `PENDING_ONBOARDING`
+  (default on create) `→ ACTIVE` (set by the registration flow once role + profile +
+  terms are complete — see `registration.md`) `→ SUSPENDED | BANNED` (admin action,
+  writer not yet located — see `rbac-guards.md`/`admin-dashboard.md`). No code path
+  currently transitions `ACTIVE` back to `PENDING_ONBOARDING`. `SUSPENDED`/`BANNED` are
+  hard-blocked at `requireActiveUser` (`src/lib/app-user.ts:58-60`); the underlying
+  NextAuth `Session` row is not revoked when status changes — enforcement happens only
+  on the next `(app)` page load, not immediately.
+
+_(remaining enums: systems-analyst fills this in per-enum while speccing the relevant
+feature)_

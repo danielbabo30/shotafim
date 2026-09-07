@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-07 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -37,6 +37,8 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
+- edge/route protection: `src/proxy.ts` — **Next.js 16 renamed `middleware.ts` to `proxy.ts`** (`export function proxy`, same `matcher` config export); it does a cookie-presence-only redirect to `/sign-in`, the real DB check is `requireActiveUser`
+- dev-only auth bypass (404s outside `NODE_ENV=development`): `src/app/(frontend)/dev/{login,seed-*}/route.ts`
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`
