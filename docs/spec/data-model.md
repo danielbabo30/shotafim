@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-04 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-08 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -19,4 +19,13 @@
 | Infra | `AuditLog · LegalConsent · MediaAttachment` | `ConsentDocumentType · MediaFileType` |
 
 ## Status transitions
-_(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+### `UserStatus` (see `docs/spec/auth.md` §5, §7)
+- `PENDING_ONBOARDING` (default on first sign-in, `prisma/schema.prisma:412`) → `ACTIVE`: set by
+  registration (#2, not yet documented) once roles + `termsAcceptedAt` are set.
+- `ACTIVE` → `SUSPENDED` / `BANNED`: triggered by admin (#19, not yet documented) — not found in
+  auth's own code.
+- Any status + `deletedAt` set → treated as blocked by `requireActiveUser()`
+  (`src/lib/app-user.ts:54-60`), but **no code path currently sets `User.deletedAt`** — soft-delete
+  of a `User` is unbuilt (see `auth.md` §9).
+- Auth only *reads* this enum to gate session access; it never writes it.
