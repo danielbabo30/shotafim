@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-04 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-09 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -19,4 +19,12 @@
 | Infra | `AuditLog · LegalConsent · MediaAttachment` | `ConsentDocumentType · MediaFileType` |
 
 ## Status transitions
-_(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+### `UserStatus` (see [`registration.md`](registration.md) §5, §7)
+`PENDING_ONBOARDING` (Prisma default on row creation) → `ACTIVE`, triggered exclusively by the
+`completeRegistration` server action's transaction commit
+(`src/lib/actions/registration-actions.ts:96`) — the only code path (outside dev/seed routes)
+that sets `status: "ACTIVE"`. `SUSPENDED` / `BANNED` are admin actions, not yet documented
+(feature #19, admin dashboard — not yet built).
+
+_(systems-analyst fills the rest in per-enum while speccing the relevant feature)_

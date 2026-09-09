@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-04. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-09. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -8,8 +8,8 @@
 
 | # | Feature | Spec file | Status | Updated | Domain agent |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Auth + sign-in (NextAuth) | `auth.md` | missing | — | private-area |
-| 2 | Multi-step registration + role selection | `registration.md` | missing | — | private-area |
+| 1 | Auth + sign-in (NextAuth) | `auth.md` | missing (5 open PRs pending merge — see #6, #5, #4, #2, #1) | — | private-area |
+| 2 | Multi-step registration + role selection | [`registration.md`](registration.md) | documented | 2026-09-09 | private-area |
 | 3 | Guards & roles (RBAC) | `rbac-guards.md` | missing | — | private-area |
 | 4 | Campaigns (create, wizard, brief) | `campaigns.md` | missing | — | private-area |
 | 5 | Marketplace + creator/space profiles | `marketplace.md` | missing | — | private-area |
@@ -32,7 +32,14 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+| Feature | Spec file | Documented |
+| --- | --- | --- |
+| Multi-step registration + role selection | [`registration.md`](registration.md) | 2026-09-09 |
+
+> Note: `auth.md` has been independently produced by several prior nightly runs (5 open,
+> unmerged PRs as of this run) but none have landed on `private-area-foundation` yet, so it
+> isn't listed here. Merging one of those PRs (and closing the rest) will let the next run pick
+> up correctly instead of re-doing #1 again.
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)

@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-09 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -8,7 +8,7 @@
 | --- | --- |
 | Marketing site + public index | `src/app/(frontend)/(marketing)/**` · `src/components/marketing/**` · `src/components/ui/**` |
 | Private area | `src/app/(frontend)/(app)/dashboard/**` · `src/components/app/**` |
-| Registration + auth | `src/app/(frontend)/(auth)/**` · `src/components/auth/**` · `src/app/api/auth/[...nextauth]/**` · `src/lib/{app-user,auth-helpers}.ts` |
+| Registration + auth | `src/app/(frontend)/(auth)/**` (`register`, `register/roles`, `register/profile`, `register/complete`, `sign-in`) · `src/components/auth/**` · `src/app/api/auth/[...nextauth]/**` · `src/lib/{app-user,auth-helpers,registration,registration-schema}.ts` · `src/lib/actions/registration-actions.ts` — see `docs/spec/registration.md` |
 | CMS (Payload) | `src/collections/**` · `src/globals/**` · `src/app/(payload)/**` · `src/lib/{cms,payload}.ts` |
 | Data | `prisma/schema.prisma` · `prisma/migrations/**` · `prisma/seed/**` · `src/seed/**` · `src/payload-types.ts` (manual!) |
 | Money | models `EscrowHold/Transaction/Invoice/AdSpaceBooking/PayoutCheckpoint` · `src/lib/reports.ts` · `src/app/api/cron/{reconcile,checkpoints}/**` |
@@ -33,7 +33,8 @@
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
 
 ## Useful grep terms
-- role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
+- role guard: `requireActiveUser` · `requireRegistrationUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
+- registration: `saveRoles` · `completeRegistration` · `RegistrationRoleKey` · `parseRegistration`
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
