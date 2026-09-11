@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-04. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-11. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -8,9 +8,9 @@
 
 | # | Feature | Spec file | Status | Updated | Domain agent |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Auth + sign-in (NextAuth) | `auth.md` | missing | — | private-area |
-| 2 | Multi-step registration + role selection | `registration.md` | missing | — | private-area |
-| 3 | Guards & roles (RBAC) | `rbac-guards.md` | missing | — | private-area |
+| 1 | Auth + sign-in (NextAuth) | `auth.md` | missing (6 open PRs pending merge — see #1, #2, #4, #5, #6, #8; see note below) | — | private-area |
+| 2 | Multi-step registration + role selection | `registration.md` | missing (1 open PR pending merge — see #7) | — | private-area |
+| 3 | Guards & roles (RBAC) | [`rbac-guards.md`](rbac-guards.md) | documented | 2026-09-11 | private-area |
 | 4 | Campaigns (create, wizard, brief) | `campaigns.md` | missing | — | private-area |
 | 5 | Marketplace + creator/space profiles | `marketplace.md` | missing | — | private-area |
 | 6 | Applications / pitches | `applications.md` | missing | — | private-area |
@@ -32,7 +32,16 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+| Feature | Spec file | Documented |
+| --- | --- | --- |
+| Guards & roles (RBAC) | [`rbac-guards.md`](rbac-guards.md) | 2026-09-11 |
+
+> **Process note:** as of 2026-09-11, `auth.md` (item 1) and `registration.md` (item 2) already
+> have content sitting in open, unmerged PRs (6 PRs for auth.md, 1 for registration.md — see
+> `rbac-guards.md` §10 for the full list and a recommendation). Because those PRs never merged,
+> this branch's queue still shows both `missing`. This run skipped straight to item 3 to avoid
+> producing a 7th duplicate `auth.md` PR — merge one of each pending PR (and close the rest) so
+> the next nightly run can pick up items 1 and 2 correctly instead of repeating this.
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
