@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-12 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -37,6 +37,18 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
+- campaign status transitions: `prisma.campaign.update` (only 2 call sites outside creation —
+  `application-actions.ts` accept-flow → `IN_PROGRESS`, `contract-actions.ts` completion →
+  `COMPLETED`; `CANCELLED` and draft→publish have no writer at all, see `campaigns.md` §10)
+
+## Process note (2026-09-12)
+As of this date there are **7 separate open, unmerged PRs re-documenting "Auth + sign-in"**
+(one from each nightly systems-analyst run, 2026-09-05 through 2026-09-11) plus one each for
+registration and RBAC guards, none merged into `private-area-foundation`. `docs/spec/INDEX.md`
+on this branch still shows those three as `missing` because nothing has landed — a future run
+should check open `spec/*` PRs (not just this file) before restarting #1-3, and someone should
+review/merge or consolidate the pile of duplicate auth PRs. See `INDEX.md`'s queue-table note
+and this run's PR description for the full list of PR numbers.
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`

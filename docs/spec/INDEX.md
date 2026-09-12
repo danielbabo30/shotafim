@@ -1,17 +1,25 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-04. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-12. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
 ## Work queue for systems-analyst (priority order)
+
+> ⚠️ 2026-09-12: items #1-3 (`auth.md`, `registration.md`, `rbac-guards.md`) show `missing`
+> below because no spec PR for them has been **merged** yet — but each already has one or more
+> open, unmerged `spec/*` PRs against `private-area-foundation` (7 separate PRs re-documenting
+> auth alone, one each for registration and RBAC guards, opened on 7 consecutive nights). A
+> future nightly run should check open PRs (not just this file) before starting #1-3 again, to
+> avoid piling on an 8th duplicate. See this run's PR description for the full list. This run
+> skipped ahead to #4 (`campaigns.md`) instead of adding to the pile-up.
 
 | # | Feature | Spec file | Status | Updated | Domain agent |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Auth + sign-in (NextAuth) | `auth.md` | missing | — | private-area |
 | 2 | Multi-step registration + role selection | `registration.md` | missing | — | private-area |
 | 3 | Guards & roles (RBAC) | `rbac-guards.md` | missing | — | private-area |
-| 4 | Campaigns (create, wizard, brief) | `campaigns.md` | missing | — | private-area |
+| 4 | Campaigns (create, wizard, brief) | `campaigns.md` | documented | 2026-09-12 | private-area |
 | 5 | Marketplace + creator/space profiles | `marketplace.md` | missing | — | private-area |
 | 6 | Applications / pitches | `applications.md` | missing | — | private-area |
 | 7 | Contract room + contracts | `contracts.md` | missing | — | private-area |
@@ -32,7 +40,11 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+| Feature | Spec | Date |
+| --- | --- | --- |
+| Campaigns (create, wizard, brief) | [`campaigns.md`](campaigns.md) | 2026-09-12 |
+
+_(#1-3 not listed here yet — specs exist in open, unmerged PRs; see the queue-table note above)_
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
