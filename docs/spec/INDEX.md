@@ -1,6 +1,7 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-04. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-13. Any code change to a documented feature → update its row here (date + status).
+> Note: features #1-4 (auth, registration, RBAC guards, campaigns) each already have an open, unmerged spec PR (see PR history) — their rows below still read `missing` because this branch hasn't absorbed those PRs yet, not because no one has documented them. See PR for this spec for details.
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -12,7 +13,7 @@
 | 2 | Multi-step registration + role selection | `registration.md` | missing | — | private-area |
 | 3 | Guards & roles (RBAC) | `rbac-guards.md` | missing | — | private-area |
 | 4 | Campaigns (create, wizard, brief) | `campaigns.md` | missing | — | private-area |
-| 5 | Marketplace + creator/space profiles | `marketplace.md` | missing | — | private-area |
+| 5 | Marketplace + creator/space profiles | [`marketplace.md`](marketplace.md) | documented | 2026-09-13 | private-area |
 | 6 | Applications / pitches | `applications.md` | missing | — | private-area |
 | 7 | Contract room + contracts | `contracts.md` | missing | — | private-area |
 | 8 | Deliverables + submissions + feedback | `deliverables.md` | missing | — | private-area |
@@ -32,7 +33,9 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+| Feature | Spec | Date | Findings for lead |
+| --- | --- | --- | --- |
+| Marketplace + creator/space profiles | [`marketplace.md`](marketplace.md) | 2026-09-13 | inconsistent role gating between the creator-marketplace and ad-space-marketplace list pages; `roleKeys` vs `activeRole` inconsistency on brand-only detail pages; `getCreatorProfile()` has no guard of its own; empty/thin creator profiles aren't flagged in the browse list |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)

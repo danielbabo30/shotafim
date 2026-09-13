@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-04 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-13 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -19,4 +19,6 @@
 | Infra | `AuditLog · LegalConsent · MediaAttachment` | `ConsentDocumentType · MediaFileType` |
 
 ## Status transitions
-_(systems-analyst fills this in per-enum while speccing the relevant feature)_
+- **`ProfileStatus`** (`CreatorProfile`, `AdSpaceOwnerProfile`, `BusinessProfile`): default `ACTIVE` on profile creation. `SUSPENDED`/`INACTIVE` transitions not traced yet (likely admin-triggered — see `docs/spec/marketplace.md` §2). Both `Marketplace` fetchers (`marketplace-query.ts`, `ad-spaces.ts`) only surface `status: "ACTIVE"` rows, so a suspended profile silently disappears from both marketplaces with no user-facing explanation.
+- **`VerificationStatus`** (same three profile models): default `PENDING` → `VERIFIED`/`REJECTED`. Read-only in the marketplace feature (drives the "verified" badge); who writes the transition isn't traced yet.
+_(remaining enums: systems-analyst fills this in per-enum while speccing the relevant feature)_

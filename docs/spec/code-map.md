@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-13 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -27,13 +27,13 @@
 - **Infra:** `app-user · app-nav · auth-helpers · admin-guard · prisma · payload · email · storage · cities · partner-categories-query · legal-consent · registration*`
 
 ## Server actions (`src/lib/actions/`)
-`ad-space · app · application · campaign · contract · dispute · message · partner · plugin · registration · review`
+`ad-space · app · application · campaign · contract · dispute · message · partner · plugin · registration · review · settings` (`settings-actions.ts` was missing from this line — added; it owns all creator/space-owner profile, channel, pricing-package and image writes, see `docs/spec/marketplace.md`)
 
 ## API routes (`src/app/api/`)
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
 
 ## Useful grep terms
-- role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
+- role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")` (watch for pages that check `roleKeys` where `activeRole` may be intended, or that skip a role check altogether — see `docs/spec/marketplace.md` §10)
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
