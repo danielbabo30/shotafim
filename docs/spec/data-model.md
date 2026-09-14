@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-04 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-14 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -20,3 +20,16 @@
 
 ## Status transitions
 _(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+### `ApplicationStatus` (see `applications.md`)
+```
+INVITED  ──(provider completes, submitApplication update branch)──► SUBMITTED
+(none)   ──(provider applies fresh, submitApplication create branch)──► SUBMITTED
+SUBMITTED ──(brand accepts, acceptApplication)───► ACCEPTED   (+ Contract created)
+SUBMITTED ──(brand rejects, rejectApplication)───► REJECTED
+SUBMITTED ──(provider withdraws, withdrawApplication)──► WITHDRAWN
+```
+`INVITED` created by `inviteToCampaign`/`reserveAdSpace` (brand-initiated);
+`SUBMITTED` (fresh) created by `submitApplication` (provider-initiated). No
+action transitions out of `ACCEPTED`/`REJECTED`/`WITHDRAWN`, and there is no
+"decline invitation" action out of `INVITED` — see `applications.md` §8.

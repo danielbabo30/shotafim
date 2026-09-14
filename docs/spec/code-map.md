@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-14 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -18,7 +18,8 @@
 ## Fetchers by domain (`src/lib/`, all wrapped in `cache()`)
 
 - **Dashboards:** `dashboard-brand · dashboard-creator · dashboard-space · admin-dashboard · partner-dashboard`
-- **Campaigns:** `campaigns · campaign-brief · applications · pitch`
+- **Campaigns:** `campaigns · campaign-brief · applications · pitch` — pitches/invites
+  detail in `docs/spec/applications.md`
 - **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form`
 - **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form`
 - **Messaging/disputes:** `messages · disputes`
@@ -34,6 +35,8 @@
 
 ## Useful grep terms
 - role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
+- applications/pitches: `CampaignApplication` · `ApplicationStatus` · `INVITED` ·
+  `invitedByUserId` · `TARGET_TYPES_FOR_ROLE` (`src/lib/pitch.ts`)
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`

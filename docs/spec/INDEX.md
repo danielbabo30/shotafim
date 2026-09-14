@@ -1,6 +1,11 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-04. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-14. Any code change to a documented feature → update its row here (date + status).
+> **Before picking "next missing" below**: also check open PRs targeting this branch
+> (`spec/*` heads) — as of 2026-09-14 there are unmerged spec PRs open for auth, registration,
+> rbac-guards, campaigns, and marketplace (features #1–5) that predate this row set and haven't
+> landed yet, so this table understates progress. Don't file a duplicate spec for a feature that
+> already has an open PR; pick the next one that doesn't.
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -13,7 +18,7 @@
 | 3 | Guards & roles (RBAC) | `rbac-guards.md` | missing | — | private-area |
 | 4 | Campaigns (create, wizard, brief) | `campaigns.md` | missing | — | private-area |
 | 5 | Marketplace + creator/space profiles | `marketplace.md` | missing | — | private-area |
-| 6 | Applications / pitches | `applications.md` | missing | — | private-area |
+| 6 | Applications / pitches | `applications.md` | documented | 2026-09-14 | private-area |
 | 7 | Contract room + contracts | `contracts.md` | missing | — | private-area |
 | 8 | Deliverables + submissions + feedback | `deliverables.md` | missing | — | private-area |
 | 9 | Messaging / conversations | `messages.md` | missing | — | private-area |
@@ -32,7 +37,9 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+- [`applications.md`](applications.md) — Applications / pitches. Documented 2026-09-14.
+  Findings: an ad-space asset picker that silently discards the selection when completing
+  a reservation invite, and no way to decline/cancel an invitation (see §10).
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
