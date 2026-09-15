@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-15 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -37,6 +37,9 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
+- contract lifecycle: `ContractStatus` · `loadContractParty` · `loadOwnedContract` ·
+  `fundEscrow` / `fundPartnerDeposit` (two funding paths, one `Contract.status` — see
+  [`contracts.md`](contracts.md) §10)
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`
