@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-16 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -32,11 +32,20 @@
 ## API routes (`src/app/api/`)
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
 
+## Deliverables / submissions / feedback (contract sub-domain)
+`src/components/app/contract-room/deliverable-proofer.tsx` (submission viewer + feedback UI, all parties) ·
+`src/lib/{contracts,contract-room,deliverable-upload}.ts` (fetcher + pure helpers) ·
+`src/lib/actions/contract-actions.ts` (`submitDeliverable · addFeedback · toggleFeedbackResolved · requestRevision · approveAndRelease`) ·
+`src/lib/storage.ts` (local-disk only — blob driver unimplemented) ·
+`src/app/api/contract-files/[attachmentId]/route.ts` (authenticated file serving).
+`ProofOfPlay`/`ProofType` (ad-space "proof it broadcast") is schema-only — no create path exists anywhere; see [`deliverables.md`](deliverables.md) §10.
+
 ## Useful grep terms
 - role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
+- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`

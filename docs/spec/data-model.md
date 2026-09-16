@@ -20,3 +20,8 @@
 
 ## Status transitions
 _(systems-analyst fills this in per-enum while speccing the relevant feature)_
+
+- `SubmissionStatus` (on `DeliverableSubmission`): `PENDING_REVIEW` (created by `submitDeliverable`) → `APPROVED` (via `approveAndRelease`, terminal for that version) or → `REVISION_REQUESTED` (via `requestRevision`; the *next* submission version starts fresh at `PENDING_REVIEW`, this row doesn't get reused). See `deliverables.md`.
+
+## Known-unimplemented models
+- `ProofOfPlay` (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call sites in `src/`; only ever read (`src/lib/dashboard-space.ts:216`) or written by dev-seed fixtures. The ad-space "proof of broadcast" feature this model was built for does not exist in the app today. See `deliverables.md` §10.
