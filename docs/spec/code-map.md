@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-04 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-17 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -34,9 +34,14 @@
 
 ## Useful grep terms
 - role guard: `requireActiveUser` · `roleKeys` · `activeRole` · `redirect("/dashboard")`
+- registration guard/actions: `requireRegistrationUser` (`src/lib/registration.ts`) · `saveRoles`/`completeRegistration` (`src/lib/actions/registration-actions.ts`) — the only writers of `User.roles` outside `/dev/*` seed routes (see `docs/spec/registration.md` §10)
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
+
+## Notes for future passes
+- API Route Handlers (`src/app/api/**`) do not share one auth helper — each re-implements its own `auth()` + status/role check inline.
+- Onboarding (`/register/{roles,profile,complete}`) is one-shot: both step pages self-redirect to `/dashboard` once `User.status === "ACTIVE"`, and nothing outside registration ever writes `User.roles` — see `docs/spec/registration.md` §7–§10.
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`

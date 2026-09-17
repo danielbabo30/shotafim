@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-04. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-17. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -9,7 +9,7 @@
 | # | Feature | Spec file | Status | Updated | Domain agent |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Auth + sign-in (NextAuth) | `auth.md` | missing | — | private-area |
-| 2 | Multi-step registration + role selection | `registration.md` | missing | — | private-area |
+| 2 | Multi-step registration + role selection | [`registration.md`](registration.md) | documented | 2026-09-17 | private-area |
 | 3 | Guards & roles (RBAC) | `rbac-guards.md` | missing | — | private-area |
 | 4 | Campaigns (create, wizard, brief) | `campaigns.md` | missing | — | private-area |
 | 5 | Marketplace + creator/space profiles | `marketplace.md` | missing | — | private-area |
@@ -32,7 +32,11 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+| Feature | Spec file | Documented | Findings for lead |
+| --- | --- | --- | --- |
+| Multi-step registration + role selection | [`registration.md`](registration.md) | 2026-09-17 | Yes — see §10: no in-product way to add a role after registration completes; `errorTab` computed but never wired to tab navigation, so a validation error on a non-active tab is nearly invisible |
+
+> Note: `auth.md` (queue item #1, Auth + sign-in) already has an open, unmerged spec PR — [#8](https://github.com/danielbabo30/shotafim/pull/8) — from a prior systems-analyst run, so this run skipped it (still "missing" here until #8 merges) and documented the next untouched item instead.
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
