@@ -8,7 +8,7 @@ import type { MainNavigation, SiteSetting } from "@/payload-types";
 export const DEFAULT_AUTH: NonNullable<SiteSetting["auth"]> = {
   personalAreaUrl: "/dashboard",
   loginUrl: "/sign-in",
-  signupUrl: "/sign-in",
+  signupUrl: "/register",
   loginLabel: "התחברות",
   signupLabel: "הרשמה למערכת",
   loggedInLabel: "האזור האישי",
@@ -37,7 +37,6 @@ export const DEFAULT_NAV_ITEMS: NonNullable<MainNavigation["items"]> = [
       },
     ],
   },
-  { label: "מאגר יוצרים", type: "link", href: "/explore/creators" },
   { label: "מדריכים", type: "link", href: "/guides" },
   { label: "מאמרים", type: "link", href: "/resources/blog" },
   { label: "תמחור", type: "link", href: "/pricing" },

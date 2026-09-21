@@ -13,6 +13,8 @@ import {
 } from "@/lib/cms-defaults";
 import { DEFAULT_HOMEPAGE } from "@/lib/homepage-defaults";
 import { DEFAULT_HOW_IT_WORKS } from "@/lib/how-it-works-defaults";
+import { DEFAULT_AUTH_PANEL } from "@/lib/auth-panel-defaults";
+import { DEFAULT_REGISTER_ROLES } from "@/lib/register-roles-defaults";
 import { DEFAULT_SOLUTIONS_CREATORS } from "@/lib/solutions-creators-defaults";
 import { DEFAULT_SOLUTIONS_BRANDS } from "@/lib/solutions-brands-defaults";
 import { DEFAULT_SOLUTIONS_AD_SPACES } from "@/lib/solutions-ad-spaces-defaults";
@@ -21,6 +23,7 @@ import { DEFAULT_COMPANY_INFO } from "@/lib/company-info-defaults";
 import { DEFAULT_POSTS } from "@/lib/posts-defaults";
 import { GUIDE_SEEDS } from "@/lib/guides-defaults";
 import { LEGAL_SEEDS } from "@/lib/legal-defaults";
+import { PARTNER_CATEGORY_SEEDS } from "@/lib/partner-categories-defaults";
 
 /**
  * זריעת תוכן ברירת מחדל למעטפת: לוגו + הגדרות אתר + תפריט ניווט.
@@ -102,6 +105,20 @@ export async function runSeed() {
   });
   log.push("how-it-works seeded");
 
+  // 5a. פאנל הרשמה / כניסה
+  await payload.updateGlobal({
+    slug: "auth-panel",
+    data: DEFAULT_AUTH_PANEL,
+  });
+  log.push("auth-panel seeded");
+
+  // 5a2. שלב 2 בהרשמה — בחירת תפקיד
+  await payload.updateGlobal({
+    slug: "register-roles",
+    data: DEFAULT_REGISTER_ROLES,
+  });
+  log.push("register-roles seeded");
+
   // 5b. עמוד "פתרונות — ליוצרים"
   await payload.updateGlobal({
     slug: "solutions-creators",
@@ -173,6 +190,30 @@ export async function runSeed() {
     }
     await payload.create({ collection: "legal-pages", data: legal });
     log.push(`legal "${legal.slug}" created`);
+  }
+
+  // 10. קטגוריות דומיין — נוצרות פעם אחת; לא דורסות עריכות קיימות
+  for (const [i, cat] of PARTNER_CATEGORY_SEEDS.entries()) {
+    const found = await payload.find({
+      collection: "categories",
+      where: { slug: { equals: cat.slug } },
+      limit: 1,
+    });
+    if (found.docs[0]) {
+      log.push(`category "${cat.slug}" already present`);
+      continue;
+    }
+    await payload.create({
+      collection: "categories",
+      data: {
+        name: cat.name,
+        slug: cat.slug,
+        scopes: cat.scopes,
+        isActive: true,
+        sortOrder: i,
+      },
+    });
+    log.push(`category "${cat.slug}" created`);
   }
 
   return log;

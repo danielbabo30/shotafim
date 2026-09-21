@@ -1,0 +1,19 @@
+import type { Metadata } from "next";
+import { requireActiveUser } from "@/lib/app-user";
+import { getMessagesData } from "@/lib/messages";
+import { MessagesWorkspace } from "@/components/app/messages/messages-workspace";
+
+export const metadata: Metadata = { title: "הודעות" };
+
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ conversation?: string }>;
+}) {
+  const [user, { conversation }] = await Promise.all([requireActiveUser(), searchParams]);
+  const { conversations } = await getMessagesData(user.id);
+
+  return (
+    <MessagesWorkspace conversations={conversations} initialSelectedConversationId={conversation} />
+  );
+}

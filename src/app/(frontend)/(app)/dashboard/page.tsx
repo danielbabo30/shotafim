@@ -1,27 +1,26 @@
 import type { Metadata } from "next";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireActiveUser } from "@/lib/app-user";
+import { BrandDashboard } from "@/components/app/dashboard/brand-dashboard";
+import { SpaceDashboard } from "@/components/app/dashboard/space/space-dashboard";
+import { CreatorDashboard } from "@/components/app/dashboard/creator/creator-dashboard";
+import { AdminDashboard } from "@/components/app/dashboard/admin/admin-dashboard";
 
-export const metadata: Metadata = { title: "דשבורד" };
+export const metadata: Metadata = { title: "לוח בקרה" };
 
 export default async function DashboardPage() {
-  const user = await requireUser();
+  const user = await requireActiveUser();
 
-  return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">שלום{user.name ? `, ${user.name}` : ""} 👋</h1>
-      <div className="rounded-xl border border-black/10 p-5 text-sm dark:border-white/10">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-          <dt className="text-black/50 dark:text-white/50">מזהה</dt>
-          <dd className="font-mono">{user.id}</dd>
-          <dt className="text-black/50 dark:text-white/50">אימייל</dt>
-          <dd>{user.email}</dd>
-          <dt className="text-black/50 dark:text-white/50">תפקיד</dt>
-          <dd>{user.role}</dd>
-        </dl>
-      </div>
-      <p className="text-black/60 dark:text-white/60">
-        זהו שלד האזור האישי. התוכן האמיתי ייבנה בשלבים הבאים.
-      </p>
-    </div>
-  );
+  if (user.activeRole === "brand") {
+    return <BrandDashboard user={user} />;
+  }
+
+  if (user.activeRole === "space") {
+    return <SpaceDashboard user={user} />;
+  }
+
+  if (user.activeRole === "creator") {
+    return <CreatorDashboard />;
+  }
+
+  return <AdminDashboard user={user} />;
 }

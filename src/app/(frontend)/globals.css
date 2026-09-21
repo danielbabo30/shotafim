@@ -89,3 +89,69 @@
     letter-spacing: -0.04em;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   סליידר טווח כפול — מרקטפלייס היוצרים
+   (שני input[type=range] שקופים חופפים; המסילה/המילוי מרונדרים כ-<span>)
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .dual-range {
+    position: relative;
+    height: 1.25rem;
+  }
+
+  .dual-range input[type="range"] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    width: 100%;
+    height: 1.25rem;
+    margin: 0;
+    background: transparent;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .dual-range input[type="range"]:focus-visible {
+    outline: none;
+  }
+
+  .dual-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    pointer-events: auto;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    border: 2px solid var(--color-surface-lowest);
+    box-shadow: var(--shadow-ambient-sm);
+    cursor: pointer;
+  }
+
+  .dual-range input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    border: 2px solid var(--color-surface-lowest);
+    box-shadow: var(--shadow-ambient-sm);
+    cursor: pointer;
+  }
+
+  .dual-range input[type="range"]::-moz-range-track {
+    background: transparent;
+  }
+
+  .dual-range input[type="range"]:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .dual-range input[type="range"]:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

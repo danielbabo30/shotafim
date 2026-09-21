@@ -12,11 +12,14 @@ import { Media } from "@/collections/Media";
 import { Posts } from "@/collections/Posts";
 import { Guides } from "@/collections/Guides";
 import { LegalPages } from "@/collections/LegalPages";
+import { Categories } from "@/collections/Categories";
 import { SiteSettings } from "@/globals/SiteSettings";
 import { MainNavigation } from "@/globals/MainNavigation";
 import { CompanyInfo } from "@/globals/CompanyInfo";
 import { Homepage } from "@/globals/Homepage";
 import { HowItWorks } from "@/globals/HowItWorks";
+import { AuthPanel } from "@/globals/AuthPanel";
+import { RegisterRoles } from "@/globals/RegisterRoles";
 import { SolutionsCreators } from "@/globals/SolutionsCreators";
 import { SolutionsBrands } from "@/globals/SolutionsBrands";
 import { SolutionsAdSpaces } from "@/globals/SolutionsAdSpaces";
@@ -39,13 +42,15 @@ export default buildConfig({
     supportedLanguages: { he },
   },
 
-  collections: [Users, Media, Posts, Guides, LegalPages],
+  collections: [Users, Media, Posts, Guides, LegalPages, Categories],
   globals: [
     SiteSettings,
     MainNavigation,
     CompanyInfo,
     Homepage,
     HowItWorks,
+    AuthPanel,
+    RegisterRoles,
     SolutionsCreators,
     SolutionsBrands,
     SolutionsAdSpaces,

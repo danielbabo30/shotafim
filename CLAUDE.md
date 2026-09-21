@@ -24,6 +24,18 @@
 7. **תבנית קובץ עמוד:** `src/app/(frontend)/(marketing)/<path>/page.tsx` — `export const metadata`, default `async function`, גוף עטוף ב-`<Container>`. הראוטים תואמים 1:1 לעץ האתר.
 8. **פונטים:** h1–h4 מקבלים `font-display` (Assistant) אוטומטית; גוף = Heebo.
 
+## האזור האישי (`src/app/(frontend)/(app)/`) — נתונים אמיתיים בלבד
+
+**כלל קבוע: אין STUB, אין PLACEHOLDER, אין נתוני-דמה. הכול מגיע מ-DB.**
+
+1. **כל מסך / רשימה / כרטיס** קורא מ-Prisma דרך fetcher תחת `src/lib/`, עטוף ב-`cache()`, מסונן למשתמש המחובר (`requireActiveUser()` מ-`src/lib/app-user.ts`). אסור להחזיר מערך קבוע, `PLACEHOLDER`, או תגובת-דמה.
+2. **אם הנתונים עדיין לא קיימים** — לזרוע אותם (route תחת `src/app/(frontend)/dev/` או `npm run db:seed`) או ליצור דרך הזרימה. לא "בינתיים נחזיר mock".
+3. **Server actions כותבים ל-DB בפועל** — `prisma.*.create/update`, בטרנזקציה כשיש כמה טבלאות. אסור `revalidatePath` + `return { ok }` בלי write אמיתי. אסור `void user` עם `// TODO`.
+4. **Guard לכל עמוד לפי תפקיד** — `requireActiveUser()` ואז בדיקת הרשאה דרך helper משותף (`roleKeys` / `activeRole`), `redirect("/dashboard")` אם אין. אותה בדיקה בכל עמוד, לא כל אחד ממציא.
+5. קטגוריות דרך `src/lib/partner-categories-query.ts`; ערים דרך `src/lib/cities.ts`. תוויות קטגוריה = מ-Payload, לא hard-coded.
+
+שכבת הכספים (Escrow/Transaction/Invoice) היא היחידה שמותר בה "פיקטיבי" מוגדר: מעברי סטטוס ידניים/אדמין עד חיבור PSP — אבל גם היא נכתבת ל-DB, לא mock.
+
 ## רכיבים קיימים
 
 | רכיב | קובץ |

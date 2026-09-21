@@ -42,11 +42,16 @@ npm run dev
 
 - אתר: http://localhost:3000
 - פאנל ניהול: http://localhost:3000/admin — בכניסה ראשונה יוצרים משתמש CMS.
-- זריעת תוכן ברירת מחדל (לוגו + הגדרות + תפריט): פתח `http://localhost:3000/dev/seed` פעם אחת.
+- זריעת תוכן CMS (לוגו + הגדרות + תפריט + קטגוריות דומיין): פתח `http://localhost:3000/dev/seed` פעם אחת.
+- זריעת נתוני עזר של Prisma (טבלת `City` — ~190 יישובים): `npm run db:seed`.
 - סטייל גайד: http://localhost:3000/style-guide
 
 > ה-Payload מריץ `push` אוטומטי לסכמת ה-DB בכל הרצת `npm run dev` (סביבת פיתוח).
 > המיגרציה של Prisma: `npm run db:migrate`.
+>
+> **קטגוריות** (`categories`) מנוהלות ב-Payload — עריכה דרך `/admin`. **ערים** (`City`)
+> מנוהלות בקוד (`prisma/seed/israel-localities.mjs`). טבלאות הקשר ב-Prisma שומרות
+> `categorySlug` — הפניה רופפת ל-Payload, ללא FK חוצה-schema.
 
 ## סקריפטים
 
@@ -58,6 +63,7 @@ npm run dev
 | `npm run lint`     | ESLint                                 |
 | `npm run format`   | Prettier                              |
 | `npm run db:migrate` | מיגרציית Prisma (פיתוח)              |
+| `npm run db:seed`  | זריעת נתוני עזר (טבלת `City` — ~190 יישובים) |
 | `npm run db:studio`| Prisma Studio                         |
 
 ## מבנה
@@ -85,7 +91,7 @@ src/
     cms-defaults.ts        # ברירות מחדל + ערכי seed
     payload.ts, prisma.ts, auth-helpers.ts, cn.ts
   seed/                    # seed.ts + default-logo.jpeg
-prisma/schema.prisma       # User/Account/Session/VerificationToken + Role
+prisma/schema.prisma       # אימות (Auth.js) + מודל הדומיין: פרופילים, קמפיינים, חוזים, Escrow, מחלוקות
 ```
 
 ### ניהול תוכן המעטפת
@@ -115,5 +121,5 @@ prisma/schema.prisma       # User/Account/Session/VerificationToken + Role
 ## שלבים הבאים
 
 - מעבר עמוד-עמוד על עץ האתר (בית → how-it-works → solutions → ...).
-- מודל הנתונים העסקי (קמפיינים, אבני דרך) — שלב נפרד.
-- שכבת הכספים (Escrow/PSP/ledger) — שלב אחרון.
+- מודל הנתונים העסקי — ✅ הוקם ב-`prisma/schema.prisma` (מיגרציה `partner_domain_models`). לוגיקת הזרימות (onboarding, קמפיינים, חוזים) — בבנייה.
+- שכבת הכספים (Escrow/PSP/ledger) — הטבלאות קיימות; מעברי סטטוס ידניים/אדמין עד חיבור PSP + API חשבוניות.
