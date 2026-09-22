@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-22. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -28,7 +28,7 @@
 | 6 | Applications / pitches | [`applications.md`](applications.md) | documented | 2026-09-14 | private-area |
 | 7 | Contract room + contracts | [`contracts.md`](contracts.md) | documented | 2026-09-15 | private-area |
 | 8 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | documented | 2026-09-16 | private-area |
-| 9 | Messaging / conversations | `messages.md` | missing | — | private-area |
+| 9 | Messaging / conversations | [`messages.md`](messages.md) | documented | 2026-09-22 | private-area |
 | 10 | Disputes | `disputes.md` | missing | — | private-area |
 | 11 | Reviews | `reviews.md` | missing | — | private-area |
 | 12 | Escrow + Transactions + Invoices | `payments.md` | missing | — | payments-escrow |
@@ -55,6 +55,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Messaging / conversations | [`messages.md`](messages.md) | 2026-09-22 | **Standalone inbox file attachments are a pure UI illusion — client-only metadata, no upload, no persistence** (the contract-room chat has the same gap but marks it as a deferred "Stage 8" no-op; the inbox gives no such signal); **`Message.readAt` has zero write path anywhere** — every message is permanently "unread" at the DB level and outgoing read receipts can never appear; the "הצעות מחיר" (quotes) filter chip can never match any conversation (its target context kinds are never produced by either conversation-creation path); contract-room conversations never bump `Conversation.updatedAt` on new messages, so active threads can sort below cold ones in the inbox |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
