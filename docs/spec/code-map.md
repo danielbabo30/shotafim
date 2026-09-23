@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-23 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -22,7 +22,7 @@
 - **Campaigns:** `campaigns · campaign-brief · applications · pitch` — campaign brief/wizard detail in `docs/spec/campaigns.md`; pitches/invites detail in `docs/spec/applications.md`
 - **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`
 - **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`
-- **Messaging/disputes:** `messages · disputes`
+- **Messaging/disputes:** `messages` (see `docs/spec/messages.md` once merged) · `disputes` — dispute lifecycle in `docs/spec/disputes.md`
 - **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr`
 - **CMS/content:** `homepage · posts · guides · legal · legal-pages · solutions-* · how-it-works · contact · company-info · cms · site` (+ `*-defaults.ts`)
 - **Infra:** `app-user · app-nav · auth-helpers · admin-guard · prisma · payload · email · storage · cities · partner-categories-query · legal-consent · registration*`
@@ -49,14 +49,16 @@
 - applications/pitches: `CampaignApplication` · `ApplicationStatus` · `INVITED` · `invitedByUserId` · `TARGET_TYPES_FOR_ROLE` (`src/lib/pitch.ts`)
 - campaign status transitions: `prisma.campaign.update` (only 2 call sites outside creation — accept-application flow → `IN_PROGRESS`, contract completion → `COMPLETED`; `CANCELLED` and draft→publish have no writer at all, see `docs/spec/campaigns.md` §10)
 - contract lifecycle: `ContractStatus` · `loadContractParty` · `loadOwnedContract` · `fundEscrow` / `fundPartnerDeposit` (two funding paths, one `Contract.status` — see `docs/spec/contracts.md` §10)
+- dispute lifecycle: `DisputeStatus` · `requireAdmin` · `resolveDispute` · `issueEnforcement` · `reasonsForCompensationModel` — resolving a dispute never touches `PartnerProgram.status` or its `SCHEDULED` checkpoints, see `docs/spec/disputes.md` §10
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
-- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay`, `DisputeMessage` (and `src/lib/auth-helpers.ts`'s guards) are all confirmed-dead as of this pass
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
-- **No shared `requireRole(key)` or ownership-scoped generic fetcher exists anywhere.** Every page/action hand-rolls its own `roleKeys.includes(...)` check and its own `findFirst`-scoped-by-`userId` ownership lookup. `requireAdmin()` is the only shared, reusable role-check function, and it's used in exactly two places (disputes). Full detail: `docs/spec/rbac-guards.md`.
+- **No shared `requireRole(key)` or ownership-scoped generic fetcher exists anywhere.** Every page/action hand-rolls its own `roleKeys.includes(...)` check and its own `findFirst`-scoped-by-`userId` ownership lookup. `requireAdmin()` is the only shared, reusable role-check function, and every one of its call sites is inside the disputes domain — both dispute pages plus `resolveDispute`/`issueEnforcement`/`resolveAnomalyFlag` in `dispute-actions.ts` (5 call sites total, see `docs/spec/disputes.md` §7). Full detail: `docs/spec/rbac-guards.md`.
+- **Disputes** (`docs/spec/disputes.md`): admin-arbitrated escalation out of the contract room (`Dispute`/`DisputeMessage`/`EnforcementAction` models), plus the same admin screen's enforcement (warning/fine/suspension/ban → `User.status` + `reliabilityScore`) and anomaly-flag clearing. Resolving a dispute never pauses the linked `PartnerProgram` — see finding 1.
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`
