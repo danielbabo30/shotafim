@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-24 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -21,7 +21,7 @@
 - **Dashboards:** `dashboard-brand · dashboard-creator · dashboard-space · admin-dashboard · partner-dashboard`
 - **Campaigns:** `campaigns · campaign-brief · applications · pitch` — campaign brief/wizard detail in `docs/spec/campaigns.md`; pitches/invites detail in `docs/spec/applications.md`
 - **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`
-- **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`
+- **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`; post-contract two-sided rating sub-domain in `docs/spec/reviews.md`
 - **Messaging/disputes:** `messages · disputes`
 - **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr`
 - **CMS/content:** `homepage · posts · guides · legal · legal-pages · solutions-* · how-it-works · contact · company-info · cms · site` (+ `*-defaults.ts`)
@@ -53,6 +53,7 @@
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
 - dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- reputation signals: `Review.rating`/`reviewCount` (review-derived, public, only from `isPublic: true` rows) vs `reliabilityScore` (penalty-only, never incremented anywhere in `src/` outside dev seeds — see `docs/spec/reviews.md` §10 finding 3) are two entirely disconnected systems; don't assume one reflects the other
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.

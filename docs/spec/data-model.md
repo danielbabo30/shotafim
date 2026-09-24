@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-21 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-24 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -70,6 +70,15 @@ created by `submitApplication` (provider-initiated). No action transitions out o
 **Finding:** the approval actions (`approveAndRelease`, `requestRevision`, `submitDeliverable`)
 do not check `compensationModel` — a revenue-share contract could have its partnership deposit
 released as if it were a flat-fee payment. Flagged in `contracts.md` §10 finding 1.
+
+### `Review` eligibility (see [`reviews.md`](reviews.md) §5/§10)
+Not a status enum — `Review` has no lifecycle of its own (immutable once created, no edit/delete
+path). Eligibility to review a contract is gated purely on `Contract.completedAt IS NOT NULL`,
+**not** on `Contract.status`. `completedAt` is stamped by both `approveAndRelease` (→
+`status: "APPROVED"`) and `resolveDispute` (→ `status: "APPROVED"` *or* `"REFUNDED"`), so a
+refunded/disputed contract is just as reviewable as a cleanly approved one via the global
+auto-modal, even though the in-room "leave a review" button hides itself for anything but
+`"APPROVED"`. See `reviews.md` §10 finding 1 for the full inconsistency.
 
 ### `SubmissionStatus` (on `DeliverableSubmission`, see [`deliverables.md`](deliverables.md))
 `PENDING_REVIEW` (created by `submitDeliverable`) → `APPROVED` (via `approveAndRelease`,
