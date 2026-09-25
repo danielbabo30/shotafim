@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-25 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -12,7 +12,7 @@
 | Guards / RBAC (cross-cutting — see `rbac-guards.md`) | No single system; per-file `roleKeys.includes(...)` checks + per-file `load<Resource>Owned`/`Party` ownership helpers inside `src/lib/actions/*.ts`. Only shared reusable guard: `requireAdmin()` (`src/lib/admin-guard.ts`). Dead duplicate: `src/lib/auth-helpers.ts` (`requireUser`/`requireRole` — unused, don't reach for it) |
 | CMS (Payload) | `src/collections/**` · `src/globals/**` · `src/app/(payload)/**` · `src/lib/{cms,payload}.ts` |
 | Data | `prisma/schema.prisma` · `prisma/migrations/**` · `prisma/seed/**` · `src/seed/**` · `src/payload-types.ts` (manual!) |
-| Money | models `EscrowHold/Transaction/Invoice/AdSpaceBooking/PayoutCheckpoint` · `src/lib/reports.ts` · `src/app/api/cron/{reconcile,checkpoints}/**` |
+| Money | models `EscrowHold/Transaction/Invoice/AdSpaceBooking/PayoutCheckpoint` · fund/release: `src/lib/actions/{contract,partner,dispute}-actions.ts` · read: `src/lib/{reports,earnings,dashboard-brand,dashboard-creator,dashboard-space}.ts` · `src/app/api/cron/{reconcile,checkpoints}/**` — core escrow/transactions/invoices in `docs/spec/payments.md` |
 | Partnerships + tracking | `src/lib/track/**` · `src/lib/partner-*.ts` · `src/lib/plugin-*.ts` · `src/app/api/{track,plugin}/**` · `wp-plugin/**` |
 | Data seeding | `src/app/(frontend)/dev/**` (seed routes) · `npm run db:seed` |
 
@@ -22,6 +22,7 @@
 - **Campaigns:** `campaigns · campaign-brief · applications · pitch` — campaign brief/wizard detail in `docs/spec/campaigns.md`; pitches/invites detail in `docs/spec/applications.md`
 - **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`
 - **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`
+- **Money:** `reports · earnings` (+ escrow/transaction slices inside `dashboard-brand · dashboard-creator · dashboard-space`) — `EscrowHold/Transaction/Invoice` core in `docs/spec/payments.md`
 - **Messaging/disputes:** `messages · disputes`
 - **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr`
 - **CMS/content:** `homepage · posts · guides · legal · legal-pages · solutions-* · how-it-works · contact · company-info · cms · site` (+ `*-defaults.ts`)
@@ -52,7 +53,8 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
-- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay`, `src/lib/auth-helpers.ts`'s guards, `Invoice` (zero writer anywhere, incl. seeds), and `TransactionType.WITHDRAWAL`/`REFUND`/`PLATFORM_ABSORPTION` (labeled in UI dictionaries, never written) are all confirmed-dead as of this pass — see `docs/spec/payments.md` §5/§10
+- money ledger: `EscrowHold` (`HELD → RELEASED_TO_PROVIDER/REFUNDED_TO_BRAND/SPLIT_DISPUTE`) is 1:1 per `Contract`; `Transaction` is append-only, `type: TransactionType` — grep the type name (e.g. `"ESCROW_RELEASE"`) to find its one writer before assuming it's live; `approveAndRelease` misattributes the release transaction to the brand's `userId` instead of the provider's (`docs/spec/payments.md` §10)
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
