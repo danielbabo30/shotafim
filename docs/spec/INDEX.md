@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-25. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -31,7 +31,7 @@
 | 9 | Messaging / conversations | `messages.md` | missing | — | private-area |
 | 10 | Disputes | `disputes.md` | missing | — | private-area |
 | 11 | Reviews | `reviews.md` | missing | — | private-area |
-| 12 | Escrow + Transactions + Invoices | `payments.md` | missing | — | payments-escrow |
+| 12 | Escrow + Transactions + Invoices | [`payments.md`](payments.md) | documented | 2026-09-25 | payments-escrow |
 | 13 | AdSpace bookings + schedules | `ad-space-bookings.md` | missing | — | payments-escrow |
 | 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing | — | partnerships-tracking |
 | 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
@@ -55,6 +55,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Escrow + Transactions + Invoices | [`payments.md`](payments.md) | 2026-09-25 | `approveAndRelease` records the `ESCROW_RELEASE`/`PLATFORM_FEE` transactions under the **brand's** `userId` instead of the provider's, so a provider's own `/dashboard/earnings` transaction history never shows money released to them; **`Invoice` has zero write path anywhere, including all dev seed routes** — the invoices tab is permanently empty in every environment; `resolveDispute` changes `EscrowHold.status` (refund/release/split) but writes no `Transaction` at all, leaving a silent gap in the ledger and making `TransactionType.REFUND` fully dead code; `WITHDRAWAL` has no writer anywhere and no withdraw action/button exists, so "available balance" on creator/space-owner dashboards is really just lifetime-released, not a real payout |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
