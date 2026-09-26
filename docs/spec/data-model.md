@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-21 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-26 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -85,6 +85,20 @@ traced yet (likely admin-triggered). Both marketplace fetchers (`marketplace-que
 from both marketplaces with no user-facing explanation. `VerificationStatus` defaults to
 `PENDING → VERIFIED`/`REJECTED`; read-only in the marketplace feature (drives the "verified"
 badge) — who writes the transition isn't traced yet (likely `admin-dashboard.md`).
+
+### `BookingStatus` (on `AdSpaceBooking`, see [`ad-space-bookings.md`](ad-space-bookings.md))
+```
+(none) ──(acceptApplication, only when the application carries both
+           requestedStartDate/EndDate — application-actions.ts:319-329)──► RESERVED
+RESERVED ──(no writer found anywhere in src/)──► CONFIRMED | BROADCASTING | COMPLETED | CANCELLED
+```
+`RESERVED` is the only value ever written outside dev-seed fixtures — `CONFIRMED`,
+`BROADCASTING`, `COMPLETED`, `CANCELLED` are dead enum values with several UI
+consumers built to read them (marketplace `isLive`, the `/dashboard/bookings` Gantt
+legend, the ad-space detail page's "live now" highlight). The "confirmed-looking"
+state most users actually see is computed separately from `EscrowHold.status ===
+"HELD"`, duplicated across `my-ad-spaces.ts` and `ad-space-schedule.ts`. A `RESERVED`
+row is also never released/cancelled once created — see `ad-space-bookings.md` §10.
 
 ## Known-unimplemented models
 - **`ProofOfPlay`** (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call

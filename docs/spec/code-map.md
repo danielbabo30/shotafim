@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-26 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -20,7 +20,7 @@
 
 - **Dashboards:** `dashboard-brand · dashboard-creator · dashboard-space · admin-dashboard · partner-dashboard`
 - **Campaigns:** `campaigns · campaign-brief · applications · pitch` — campaign brief/wizard detail in `docs/spec/campaigns.md`; pitches/invites detail in `docs/spec/applications.md`
-- **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`
+- **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`; booking calendar/availability sub-domain (`my-ad-spaces · ad-spaces · ad-space-schedule · dashboard-space`) detailed in `docs/spec/ad-space-bookings.md`
 - **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`
 - **Messaging/disputes:** `messages · disputes`
 - **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr`
@@ -33,6 +33,20 @@
 
 ## API routes (`src/app/api/`)
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
+
+## AdSpace bookings / schedules (marketplace sub-domain — see `docs/spec/ad-space-bookings.md`)
+`src/app/(frontend)/(app)/dashboard/bookings/page.tsx` (space-owner monthly Gantt) ·
+`src/components/app/ad-spaces/schedule-gantt.tsx` ·
+`src/lib/{ad-space-schedule,my-ad-spaces,dashboard-space,ad-spaces}.ts` (fetchers — all
+derive booking/availability display state from `AdSpaceBooking` + `EscrowHold`, with
+duplicated `BookingStatus`→display-state mapping logic across files) ·
+`src/lib/actions/application-actions.ts` (`reserveAdSpace · submitApplication ·
+acceptApplication` — the only writers of `AdSpaceBooking`/`requestedStartDate` /
+`requestedEndDate`) · `src/lib/actions/ad-space-actions.ts` (`deleteAdSpaceAsset` —
+blocks hard-delete when active bookings exist).
+`AdSpaceBooking.status` is schema-rich but practically dead beyond `RESERVED` — see
+`docs/spec/ad-space-bookings.md` §10 finding 1. A direct (non-"reserve ביומן")
+application to an `AD_SPACE` campaign never creates a booking row at all — §10 finding 2.
 
 ## Deliverables / submissions / feedback (contract sub-domain — see `docs/spec/deliverables.md`)
 `src/components/app/contract-room/deliverable-proofer.tsx` (submission viewer + feedback UI, all parties) ·
@@ -52,7 +66,7 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
-- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay`, `src/lib/auth-helpers.ts`'s guards, and `AdSpaceBooking.status` beyond `RESERVED` (grep `adSpaceBooking\.update` / `\.delete` — zero hits) are all confirmed-dead as of this pass
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
