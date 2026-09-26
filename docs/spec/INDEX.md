@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-26. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -32,7 +32,7 @@
 | 10 | Disputes | `disputes.md` | missing | — | private-area |
 | 11 | Reviews | `reviews.md` | missing | — | private-area |
 | 12 | Escrow + Transactions + Invoices | `payments.md` | missing | — | payments-escrow |
-| 13 | AdSpace bookings + schedules | `ad-space-bookings.md` | missing | — | payments-escrow |
+| 13 | AdSpace bookings + schedules | [`ad-space-bookings.md`](ad-space-bookings.md) | documented | 2026-09-26 | payments-escrow |
 | 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing | — | partnerships-tracking |
 | 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
 | 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing | — | partnerships-tracking |
@@ -55,6 +55,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| AdSpace bookings + schedules | [`ad-space-bookings.md`](ad-space-bookings.md) | 2026-09-26 | **`AdSpaceBooking.status` only ever takes the value `RESERVED`** — `CONFIRMED`/`BROADCASTING`/`COMPLETED`/`CANCELLED` have zero writers, so every "live now"/"confirmed"/"completed" UI reading this field is dead code (same shape as the `ProofOfPlay` finding above); a space owner applying directly to an `AD_SPACE` campaign brief (not via the brand's "reserve ביומן" shortcut) is never asked for a date window, so the resulting contract gets **no `AdSpaceBooking` row at all** — the double-booking guard this feature exists for doesn't run on what looks like the primary flow; a `RESERVED` booking can never be cancelled/released, so a refunded or dead contract permanently blocks its calendar window |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
