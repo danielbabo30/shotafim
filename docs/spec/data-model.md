@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-21 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-27 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -86,11 +86,34 @@ from both marketplaces with no user-facing explanation. `VerificationStatus` def
 `PENDING → VERIFIED`/`REJECTED`; read-only in the marketplace feature (drives the "verified"
 badge) — who writes the transition isn't traced yet (likely `admin-dashboard.md`).
 
+### `ProgramStatus` (`PartnerProgram`, see [`partner-programs.md`](partner-programs.md) §5)
+```
+—                     ──(acceptApplication, REVENUE_SHARE)──────► PENDING_DEPOSIT
+PENDING_DEPOSIT       ──(fundPartnerDeposit, brand)───────────────► ACTIVE
+ACTIVE                ──(drain crosses 80%)───────────────────────► GATE_80
+GATE_80               ──(topUpPartnerDeposit, brand)──────────────► ACTIVE
+ACTIVE/GATE_80        ──(drain crosses 100%)──────────────────────► PAUSED (+ partnershipDebtILS += overage)
+PAUSED                ──(topUpPartnerDeposit, brand)──────────────► ACTIVE
+ACTIVE/GATE_80/PAUSED ──(reconcile cron, endDate+14d, no checkpoints left)──► CLOSED
+```
+The 80%-gate's `STOP` vote (`PartnerGateEvent.resolution`) never itself changes `status` —
+the program keeps accruing commissions at `GATE_80` regardless of either party's choice; only a
+100% drain or a top-up moves it. See `partner-programs.md` §10 finding 3.
+
 ## Known-unimplemented models
 - **`ProofOfPlay`** (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call
   sites in `src/`; only ever read (`src/lib/dashboard-space.ts:216,253-254`) or written by
   dev-seed fixtures. The ad-space "proof of broadcast" feature this model was built for does not
   exist in the app today — the flags computed from it are permanently `false`. See
   [`deliverables.md`](deliverables.md) §10 finding 1.
+- **`BusinessProfile.partnershipDebtILS`** (`schema.prisma:520`) — incremented on partnership
+  deposit overage (`src/lib/track/drain.ts:69-86`) but never decremented, refunded, or checked
+  anywhere; the schema comment claims `> 0` blocks opening new campaigns, but no such gate exists
+  in `campaign-actions.ts` or elsewhere. See [`partner-programs.md`](partner-programs.md) §10
+  finding 1.
+- **`PartnerProgram.topUpMode: AUTO`** and **`PayoutCheckpoint.reversalsILS`** — both modeled in
+  the schema, neither has a real code path (`AUTO` is never set/branched on; `reversalsILS` is
+  never written — reversal clawbacks go through `carryInILS`/`applyDeposiDrain` instead). See
+  [`partner-programs.md`](partner-programs.md) §8.
 
 _(remaining enums: systems-analyst fills this in per-enum while speccing the relevant feature)_
