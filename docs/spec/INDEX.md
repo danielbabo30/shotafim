@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-27. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -15,6 +15,18 @@
 > merged version. **Going forward: before starting the "next missing" item, check open `spec/*`
 > PRs against this branch, not just this table** — a PR can exist and be worth merging even
 > though this file still shows `missing` until it lands.
+>
+> **2026-09-27 note:** the same backlog pattern is re-forming, this time *without* duplicates —
+> PRs #17–#21 (`spec/messages`, `spec/disputes`, `spec/reviews`, `spec/payments`,
+> `spec/ad-space-bookings`; queue items #9–#13) were opened on five consecutive nights
+> (2026-09-22 through 2026-09-26) and **all five are still open**, none merged or reviewed as of
+> this run. Each run correctly avoided re-documenting an item that already had an open PR, so
+> this run skipped items #9–#13 and documented **#14 (Revenue-share partnerships / `partner-programs.md`)**
+> instead. That means five spec PRs are now sitting unmerged with nobody visibly reviewing them —
+> worth a human checking in on why the merge step isn't happening, before the backlog grows
+> past what one cleanup pass can reconcile again. Next run: check PRs #17–#22 (this one's PR
+> included) before picking the next item — if any merged, resume from the true next `missing`
+> item; if not, continue past the open ones as this run did (next up: #15 tracking engine).
 
 ## Work queue for systems-analyst (priority order)
 
@@ -33,7 +45,7 @@
 | 11 | Reviews | `reviews.md` | missing | — | private-area |
 | 12 | Escrow + Transactions + Invoices | `payments.md` | missing | — | payments-escrow |
 | 13 | AdSpace bookings + schedules | `ad-space-bookings.md` | missing | — | payments-escrow |
-| 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing | — | partnerships-tracking |
+| 14 | Revenue-share partnerships (PartnerProgram) | [`partner-programs.md`](partner-programs.md) | documented | 2026-09-27 | partnerships-tracking |
 | 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
 | 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing | — | partnerships-tracking |
 | 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing | — | partnerships-tracking |
@@ -55,6 +67,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Revenue-share partnerships (PartnerProgram) | [`partner-programs.md`](partner-programs.md) | 2026-09-27 | `BusinessProfile.partnershipDebtILS` is incremented on deposit overage but never enforced (schema comment claims it blocks new campaigns — no such check exists) or repaid anywhere; the 80% gate's "עצור/Stop" choice is a no-op — the partnership keeps accruing commissions regardless, and one party choosing Stop unilaterally closes the gate even if the other chose Continue; `LegalConsent(PARTNERSHIP_AGREEMENT)` is recorded for both parties with no UI ever presenting the agreement (same pattern as the registration consent gap in `registration.md`) |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
