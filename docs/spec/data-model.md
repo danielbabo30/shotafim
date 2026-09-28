@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-21 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-28 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -86,11 +86,34 @@ from both marketplaces with no user-facing explanation. `VerificationStatus` def
 `PENDING → VERIFIED`/`REJECTED`; read-only in the marketplace feature (drives the "verified"
 badge) — who writes the transition isn't traced yet (likely `admin-dashboard.md`).
 
+### `AttributedOrder.status` (`OrderCommissionStatus`, see [`tracking-engine.md`](tracking-engine.md) §5)
+`PENDING` (created by `ingestOrder`) `→ APPROVED` (`runReconcile`, 14-day stability window +
+stable raw Woo status, drains the partnership deposit) `→ PAID` (payout checkpoint, out of
+scope — see `payout-cron.md`, queue #18). `PENDING`/`APPROVED` `→ REVERSED` on full
+refund/cancel/fail (`reverseCommission`); a partial refund pro-rates the amount down in place
+instead of reversing. **`ON_HOLD` is in the enum, is fully read/rendered downstream
+(`approveCommission`/`reverseCommission` both treat it as a valid starting state; the partner
+dashboard renders a label for it) but has zero writer anywhere in `src/`** — likely the
+intended entry point for a per-order dispute action queue item #10 (`disputes.md`) hasn't built
+yet. See `tracking-engine.md` §10 finding 3.
+
+### `TrackedSite.status` (`SiteStatus`, see [`tracking-engine.md`](tracking-engine.md) §5)
+`ACTIVE ⇄ STALE ⇄ OFFLINE` driven by the hourly `runMonitor` cron based on heartbeat age +
+recent click activity; `OFFLINE` past a 36h grace window force-`PAUSE`s every live
+`PartnerProgram` on the business. Any status `→ DEACTIVATED` via WordPress's
+`register_deactivation_hook` or `disconnectStore`; only `rotateStoreKey`/`connectStore`
+re-pairing brings it back to `ACTIVE`. No delete path exists outside dev-seed cleanup.
+
 ## Known-unimplemented models
 - **`ProofOfPlay`** (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call
   sites in `src/`; only ever read (`src/lib/dashboard-space.ts:216,253-254`) or written by
   dev-seed fixtures. The ad-space "proof of broadcast" feature this model was built for does not
   exist in the app today — the flags computed from it are permanently `false`. See
   [`deliverables.md`](deliverables.md) §10 finding 1.
+- **`MaintenanceWindow`** (`prisma/schema.prisma:1446-1459`) — same pattern as `ProofOfPlay`:
+  zero `.create()` call sites anywhere in `src/`, including dev-seed (which only ever
+  `deleteMany`s it). The read side that depends on it (suppressing false tracking-offline
+  alerts, flagging clicks `unverifiable`) is fully implemented and reachable, but can never
+  actually trigger — see [`tracking-engine.md`](tracking-engine.md) §10 finding 1.
 
 _(remaining enums: systems-analyst fills this in per-enum while speccing the relevant feature)_
