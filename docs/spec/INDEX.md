@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-29. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -15,6 +15,16 @@
 > merged version. **Going forward: before starting the "next missing" item, check open `spec/*`
 > PRs against this branch, not just this table** — a PR can exist and be worth merging even
 > though this file still shows `missing` until it lands.
+
+> **2026-09-29 note:** the same unmerged-backlog pattern is recurring — PRs #17–#23 (one per
+> night, 2026-09-22 through 2026-09-28: `messages`, `disputes`, `reviews`, `payments`,
+> `ad-space-bookings`, `partner-programs`, `tracking-engine`, in that order) are all still open
+> against `private-area-foundation`, so items #9–#15 below still read `missing` even though each
+> has a candidate spec waiting for review. This run skipped past all seven (per the rule above)
+> and documented **#16 Anomaly detection + enforcement** instead. Team lead: consider merging
+> (or closing superseded duplicates from) #17–#23 before the queue reaches them again — 7 nights
+> of backlog is enough that a future run may start re-documenting one of them if any PR goes
+> stale/closed without a merge.
 
 ## Work queue for systems-analyst (priority order)
 
@@ -35,7 +45,7 @@
 | 13 | AdSpace bookings + schedules | `ad-space-bookings.md` | missing | — | payments-escrow |
 | 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing | — | partnerships-tracking |
 | 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
-| 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing | — | partnerships-tracking |
+| 16 | Anomaly detection + enforcement | [`anomaly-enforcement.md`](anomaly-enforcement.md) | documented | 2026-09-29 | partnerships-tracking |
 | 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing | — | partnerships-tracking |
 | 18 | Payout checkpoints + reconcile + monitor | `payout-cron.md` | missing | — | payments-escrow |
 | 19 | Admin dashboard | `admin-dashboard.md` | missing | — | private-area |
@@ -55,6 +65,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Anomaly detection + enforcement | [`anomaly-enforcement.md`](anomaly-enforcement.md) | 2026-09-29 | The admin dashboard root route (`dashboard/page.tsx`'s fallback branch → `<AdminDashboard>`) has **no independent `requireAdmin()` call**, unlike every other admin surface (disputes pages/actions) — it relies solely on `activeRole === "admin"` derived by `requireActiveUser()`; dormant today only because `rbac-guards.md` already found no production path grants `UserRole.ADMIN`, but it's the one admin screen not defended in depth; `EnforcementAction` has no FK back to the `AnomalyFlag` that may have prompted it (pure free-text `reason`), and `resolveAnomalyFlag` has no way to record why a flag was resolved; `issueEnforcement` never checks `targetUserId` actually belongs to the given `disputeId`; automated detection only covers `REVENUE_SHARE` contracts and is scoped per-`PartnerProgram` (no cross-program aggregation), so `FIXED_FEE` abuse and abuse spread thin across several programs both go undetected |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
