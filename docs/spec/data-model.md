@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-21 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-09-29 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -85,6 +85,21 @@ traced yet (likely admin-triggered). Both marketplace fetchers (`marketplace-que
 from both marketplaces with no user-facing explanation. `VerificationStatus` defaults to
 `PENDING → VERIFIED`/`REJECTED`; read-only in the marketplace feature (drives the "verified"
 badge) — who writes the transition isn't traced yet (likely `admin-dashboard.md`).
+
+### `AnomalyFlag` / `EnforcementAction` (see [`anomaly-enforcement.md`](anomaly-enforcement.md) §5/§8)
+`AnomalyFlag`: only transition is `unresolved (resolvedAt: null) → resolved`, set exclusively by
+`resolveAnomalyFlag` (admin); never reopened, no "false positive" vs. "handled" distinction.
+Raised exclusively by the hourly monitor cron's `detectAnomalies()`
+(`src/lib/track/anomaly.ts:49-158`), scoped to one `PartnerProgram` at a time (`REVENUE_SHARE`/
+`HYBRID` contracts only — no equivalent exists for `FIXED_FEE`). `EnforcementAction` has no
+status/transitions of its own (create-only audit row); its side effects are conditional writes
+in the same transaction as creation: `SUSPENSION` sets `User.status: ACTIVE → SUSPENDED` (guarded
+on current status being `ACTIVE`), `BAN` sets `User.status → BANNED` (unguarded, overwrites even
+`SUSPENDED`), both types also deduct a fixed `reliabilityScore` penalty. No column links an
+`EnforcementAction` back to a specific `AnomalyFlag` — only a free-text `reason` and an optional
+`disputeId`. `EnforcementAction.expiresAt` exists in the schema but has zero writers anywhere in
+`src/` — a `SUSPENSION` is effectively indefinite (no un-suspend action exists either — see
+`rbac-guards.md` §10 for the matching gap on the reverse `UserStatus` transition).
 
 ## Known-unimplemented models
 - **`ProofOfPlay`** (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call

@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-29 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -54,9 +54,18 @@
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
 - dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
 
+## Anomaly detection + enforcement (see `docs/spec/anomaly-enforcement.md`)
+`src/lib/track/cron/monitor.ts` (hourly orchestrator, also does tracking-engine heartbeat/pause) ·
+`src/lib/track/anomaly.ts` (`detectAnomalies` — 5 heuristics, per-`PartnerProgram` only, revenue-share
+contracts only) · `src/lib/admin-dashboard.ts` (platform-wide unresolved-flag panel, **no
+`requireAdmin()` of its own** — see below) · `src/lib/disputes.ts` (dispute-scoped flag panel) ·
+`src/lib/actions/dispute-actions.ts` (`resolveAnomalyFlag`, `issueEnforcement` — both admin-gated) ·
+`src/components/app/dispute/{resolve-anomaly-button,enforcement-form}.tsx`.
+
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
 - **No shared `requireRole(key)` or ownership-scoped generic fetcher exists anywhere.** Every page/action hand-rolls its own `roleKeys.includes(...)` check and its own `findFirst`-scoped-by-`userId` ownership lookup. `requireAdmin()` is the only shared, reusable role-check function, and it's used in exactly two places (disputes). Full detail: `docs/spec/rbac-guards.md`.
+- **`dashboard/page.tsx`'s admin fallback branch (`<AdminDashboard>`) never calls `requireAdmin()`** — the only admin-facing screen that doesn't, unlike disputes pages/actions and unlike `issueEnforcement`/`resolveAnomalyFlag`. Currently dormant only because `UserRole.ADMIN` has no production grant path (see `rbac-guards.md` §10); flagged again in `anomaly-enforcement.md` §7/§10 since it's the page rendering that feature's platform-wide flag panel.
 
 ## Commands
 `npm run dev` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run db:migrate` · `npm run db:seed` · `npm run plugin:build`
