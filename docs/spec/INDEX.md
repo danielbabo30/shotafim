@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-09-30. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -36,7 +36,7 @@
 | 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing | — | partnerships-tracking |
 | 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
 | 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing | — | partnerships-tracking |
-| 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing | — | partnerships-tracking |
+| 17 | WooCommerce plugin (bridgead-woo) | [`woo-plugin.md`](woo-plugin.md) | documented | 2026-09-30 | partnerships-tracking |
 | 18 | Payout checkpoints + reconcile + monitor | `payout-cron.md` | missing | — | payments-escrow |
 | 19 | Admin dashboard | `admin-dashboard.md` | missing | — | private-area |
 | 20 | CMS-backed marketing site (pages + globals) | `marketing-cms.md` | missing | — | frontend-marketing |
@@ -55,6 +55,16 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| WooCommerce plugin (bridgead-woo) | [`woo-plugin.md`](woo-plugin.md) | 2026-09-30 | A permanently-rejected `/api/track/order` report (e.g. stale key mid-checkout) still flags the WC order `_bridgead_reported`, which silently disables all future refund/cancellation reporting for that order — only the nightly digest (no refund-amount field) might catch it; the HMAC request's domain-binding check (`src/lib/track/auth.ts:58-69`) can never actually fire for real plugin traffic, since `wp_remote_post()` never sends `Origin`/`Referer` — a dead control, not a real one; rotating a store's key from the dashboard gives the old plugin install no warning before it silently starts failing |
+
+> **2026-09-30 backlog note:** PRs **#17–#24** (queue items #9–#16: messages, disputes, reviews,
+> payments, ad-space-bookings, partner-programs, tracking-engine, anomaly-enforcement) were all
+> still open and unmerged as of this run — 8 nights of spec output with none landed, growing by one
+> PR per night since 2026-09-22. This run's own PR (queue #17, WooCommerce plugin) makes 9. Per the
+> 2026-09-21 cleanup note this run checked open `spec/*` PRs first and moved past the whole block
+> rather than duplicating; the next run should do the same. **Flagged for the team lead in this
+> PR's description: the merge step isn't keeping pace with the nightly job and is worth a look
+> before the remaining queue (5 items after this one: #18–#22) also piles up unreviewed.**
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
