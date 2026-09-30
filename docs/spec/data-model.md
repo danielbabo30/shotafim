@@ -86,6 +86,16 @@ from both marketplaces with no user-facing explanation. `VerificationStatus` def
 `PENDING → VERIFIED`/`REJECTED`; read-only in the marketplace feature (drives the "verified"
 badge) — who writes the transition isn't traced yet (likely `admin-dashboard.md`).
 
+### `SiteStatus` (on `TrackedSite`, see [`woo-plugin.md`](woo-plugin.md) §5/§7)
+`ACTIVE` (default on pairing, `src/lib/actions/plugin-actions.ts:69`/`105`) `→ STALE → OFFLINE`
+driven by the monitor cron reading `lastHeartbeatAt` staleness (`tracking-engine.md` scope, not
+the plugin itself) `→ ACTIVE` again on any successful heartbeat/order/click from the plugin
+(`src/app/api/plugin/heartbeat/route.ts:28-31`). `→ DEACTIVATED` via either the brand's own
+"ניתוק חנות" action (`disconnectStore`, `plugin-actions.ts:118-121`) or the plugin's
+best-effort deactivation ping (`POST /api/plugin/deactivated` → `src/app/api/plugin/deactivated/route.ts:29-31`).
+Rotating a key (`rotateStoreKey`) resets `DEACTIVATED`/`STALE`/`OFFLINE` back to `ACTIVE`
+optimistically, before any real traffic confirms the new key works.
+
 ## Known-unimplemented models
 - **`ProofOfPlay`** (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call
   sites in `src/`; only ever read (`src/lib/dashboard-space.ts:216,253-254`) or written by

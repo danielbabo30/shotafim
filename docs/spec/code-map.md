@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-30 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -13,7 +13,7 @@
 | CMS (Payload) | `src/collections/**` · `src/globals/**` · `src/app/(payload)/**` · `src/lib/{cms,payload}.ts` |
 | Data | `prisma/schema.prisma` · `prisma/migrations/**` · `prisma/seed/**` · `src/seed/**` · `src/payload-types.ts` (manual!) |
 | Money | models `EscrowHold/Transaction/Invoice/AdSpaceBooking/PayoutCheckpoint` · `src/lib/reports.ts` · `src/app/api/cron/{reconcile,checkpoints}/**` |
-| Partnerships + tracking | `src/lib/track/**` · `src/lib/partner-*.ts` · `src/lib/plugin-*.ts` · `src/app/api/{track,plugin}/**` · `wp-plugin/**` |
+| Partnerships + tracking | `src/lib/track/**` · `src/lib/partner-*.ts` · `src/lib/plugin-*.ts` · `src/app/api/{track,plugin}/**` · `wp-plugin/**` (standalone PHP WooCommerce plugin, client half of the tracking protocol — see `docs/spec/woo-plugin.md`; server half in `docs/spec/tracking-engine.md`) |
 | Data seeding | `src/app/(frontend)/dev/**` (seed routes) · `npm run db:seed` |
 
 ## Fetchers by domain (`src/lib/`, all wrapped in `cache()`)
@@ -53,6 +53,7 @@
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
 - dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- WooCommerce plugin protocol: `X-BridgeAd-Site` / `X-BridgeAd-Timestamp` / `X-BridgeAd-Signature` (HMAC headers) · `authenticateTrackRequest` (`src/lib/track/auth.ts`) · `bridgead_settings` / `bridgead_queue` (WP-side `wp_options`, plugin has no DB of its own) · `_bridgead_ref` / `_bridgead_reported` (WC order meta) — see `docs/spec/woo-plugin.md`
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
