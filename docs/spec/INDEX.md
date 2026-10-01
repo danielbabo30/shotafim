@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-10-01. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -37,7 +37,7 @@
 | 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
 | 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing | — | partnerships-tracking |
 | 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing | — | partnerships-tracking |
-| 18 | Payout checkpoints + reconcile + monitor | `payout-cron.md` | missing | — | payments-escrow |
+| 18 | Payout checkpoints + reconcile + monitor | [`payout-cron.md`](payout-cron.md) | documented | 2026-10-01 | payments-escrow |
 | 19 | Admin dashboard | `admin-dashboard.md` | missing | — | private-area |
 | 20 | CMS-backed marketing site (pages + globals) | `marketing-cms.md` | missing | — | frontend-marketing |
 | 21 | Long-form content (posts / guides / legal) | `content-long.md` | missing | — | frontend-marketing |
@@ -55,6 +55,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Payout checkpoints + reconcile + monitor | [`payout-cron.md`](payout-cron.md) | 2026-10-01 | **Clawback debt with no remaining scheduled checkpoint is silently lost** — `PLATFORM_ABSORPTION`/`PLATFORM_ABSORPTION_CEILING_PCT` exist in schema/constants for exactly this case but have zero write path, same shape of gap as `ProofOfPlay`; brand's manual order-approve skips the 14-day stability check `reconcile` enforces automatically; `notifyPartnership(..., "admin")` for tracking-offline alerts is a no-op in production (same root cause as the `rbac-guards.md` ADMIN-role gap) |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
