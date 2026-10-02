@@ -1,6 +1,6 @@
 # Data Model — overview
 
-> updated: 2026-09-21 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
+> updated: 2026-10-02 · source of truth: `prisma/schema.prisma` · manual mirror in `src/payload-types.ts`.
 > systems-analyst expands this; data-cms updates it on every schema change.
 
 ## Model groups
@@ -24,13 +24,16 @@
 `PENDING_ONBOARDING` (Prisma default on row creation, set by the Auth.js `PrismaAdapter` on
 first sign-in) `→ ACTIVE`, triggered exclusively by `completeRegistration`'s transaction commit
 (`src/lib/actions/registration-actions.ts:96`) — the only code path (outside dev/seed routes)
-that sets `status: "ACTIVE"`. `→ SUSPENDED | BANNED` — admin action; **no writer found anywhere
-in `src/`** as of this pass (see `rbac-guards.md` §10 — there's no production path to admin
-capability either, so this is presumably deferred to `admin-dashboard.md`, queue #19). No code
-path transitions `ACTIVE` back to `PENDING_ONBOARDING`. `SUSPENDED`/`BANNED` are hard-blocked at
-`requireActiveUser()` (`src/lib/app-user.ts:58-60`), but the underlying Auth.js `Session` row is
-**not** revoked when status changes — enforcement happens only on the next `(app)` page load,
-not immediately.
+that sets `status: "ACTIVE"`. `→ SUSPENDED | BANNED` — written by `issueEnforcement`
+(`src/lib/actions/dispute-actions.ts:221,224`, `requireAdmin()`-gated), as part of the admin
+dashboard's enforcement action (see `admin-dashboard.md` §5; this corrects this file's prior note,
+written before that code existed, that no writer existed). No code path transitions `ACTIVE` back
+to `PENDING_ONBOARDING`, **and no code path reverses `SUSPENDED`/`BANNED` back to `ACTIVE` either**
+— `EnforcementAction.expiresAt` exists in the schema but is never set or read, i.e. a
+temporary-suspension feature the schema anticipated but the code never built (`admin-dashboard.md`
+§8 finding). `SUSPENDED`/`BANNED` are hard-blocked at `requireActiveUser()`
+(`src/lib/app-user.ts:58-60`), but the underlying Auth.js `Session` row is **not** revoked when
+status changes — enforcement happens only on the next `(app)` page load, not immediately.
 
 ### `ApplicationStatus` (see [`applications.md`](applications.md) §5)
 ```
@@ -79,12 +82,15 @@ reaching a terminal-ish state).
 
 ### `ProfileStatus` / `VerificationStatus` (`CreatorProfile`, `AdSpaceOwnerProfile`,
 `BusinessProfile` — see [`marketplace.md`](marketplace.md) §2/§5)
-`ProfileStatus` defaults to `ACTIVE` on profile creation; `SUSPENDED`/`INACTIVE` transitions not
-traced yet (likely admin-triggered). Both marketplace fetchers (`marketplace-query.ts`,
-`ad-spaces.ts`) only surface `status: "ACTIVE"` rows, so a suspended profile silently disappears
-from both marketplaces with no user-facing explanation. `VerificationStatus` defaults to
+`ProfileStatus` defaults to `ACTIVE` on profile creation; `SUSPENDED`/`INACTIVE` transitions have
+**no writer anywhere in `src/`** — confirmed in `admin-dashboard.md` (queue #19, now documented):
+the admin dashboard has no profile-moderation screen at all. Both marketplace fetchers
+(`marketplace-query.ts`, `ad-spaces.ts`) only surface `status: "ACTIVE"` rows, so a suspended
+profile silently disappears from both marketplaces with no user-facing explanation. `VerificationStatus` defaults to
 `PENDING → VERIFIED`/`REJECTED`; read-only in the marketplace feature (drives the "verified"
-badge) — who writes the transition isn't traced yet (likely `admin-dashboard.md`).
+badge) — **confirmed no writer anywhere in `src/` outside dev-seed fixtures.** The admin sidebar
+nav already links to `/dashboard/verifications` (`src/lib/app-nav.ts:119`) as if this existed, but
+the route 404s — see `admin-dashboard.md` §8/§10 finding 1.
 
 ## Known-unimplemented models
 - **`ProofOfPlay`** (`prisma/schema.prisma:1051-1063`) — has zero `.create()`/`.update()` call
@@ -92,5 +98,9 @@ badge) — who writes the transition isn't traced yet (likely `admin-dashboard.m
   dev-seed fixtures. The ad-space "proof of broadcast" feature this model was built for does not
   exist in the app today — the flags computed from it are permanently `false`. See
   [`deliverables.md`](deliverables.md) §10 finding 1.
+- **`UserBlockReport`** (`prisma/schema.prisma:1249-1265`) — zero read or write call sites
+  anywhere in `src/`. A user-reports-another-user moderation model with no create path (nothing
+  lets a user file one) and no admin review screen. See [`admin-dashboard.md`](admin-dashboard.md)
+  §5/§10 finding 6.
 
 _(remaining enums: systems-analyst fills this in per-enum while speccing the relevant feature)_

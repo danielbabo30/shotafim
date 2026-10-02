@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-10-02 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -18,7 +18,7 @@
 
 ## Fetchers by domain (`src/lib/`, all wrapped in `cache()`)
 
-- **Dashboards:** `dashboard-brand · dashboard-creator · dashboard-space · admin-dashboard · partner-dashboard`
+- **Dashboards:** `dashboard-brand · dashboard-creator · dashboard-space · admin-dashboard · partner-dashboard` — note `partner-dashboard` is *not* an admin surface despite the name: it's the per-contract revenue-share metrics view shown to the business/provider themselves inside their own contract room, gated by ownership not `requireAdmin()`. See `docs/spec/admin-dashboard.md` §4.
 - **Campaigns:** `campaigns · campaign-brief · applications · pitch` — campaign brief/wizard detail in `docs/spec/campaigns.md`; pitches/invites detail in `docs/spec/applications.md`
 - **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`
 - **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`
@@ -55,6 +55,18 @@
 - dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
 
 ## Notes from specced features
+- **Admin surface is `/dashboard` + `/dashboard/disputes/**`, not a dedicated `/dashboard/admin/**`
+  route.** `requireAdmin()` (`src/lib/admin-guard.ts`) now has 5 call sites (grown from the 2 that
+  `rbac-guards.md` documented): the 2 dispute pages plus `resolveDispute`/`issueEnforcement`/
+  `resolveAnomalyFlag` in `src/lib/actions/dispute-actions.ts`. The `/dashboard` landing page
+  itself reaches its `AdminDashboard` branch with **no explicit admin check** (an `else` after
+  ruling out brand/space/creator) — see `docs/spec/admin-dashboard.md` §8. One admin-gated action,
+  `triggerPayoutCheckpoint` (`src/lib/actions/partner-actions.ts`), hand-rolls its own check
+  instead of reusing `requireAdmin()`, and has no UI caller anywhere.
+- **No profile-verification or general user-management UI exists**, despite the admin sidebar
+  nav (`src/lib/app-nav.ts`) already linking to `/dashboard/verifications` — that route doesn't
+  exist (404). `VerificationStatus`/`ProfileStatus` have zero writers anywhere in `src/`. Full
+  detail: `docs/spec/admin-dashboard.md` §5/§8/§10.
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
 - **No shared `requireRole(key)` or ownership-scoped generic fetcher exists anywhere.** Every page/action hand-rolls its own `roleKeys.includes(...)` check and its own `findFirst`-scoped-by-`userId` ownership lookup. `requireAdmin()` is the only shared, reusable role-check function, and it's used in exactly two places (disputes). Full detail: `docs/spec/rbac-guards.md`.
 
