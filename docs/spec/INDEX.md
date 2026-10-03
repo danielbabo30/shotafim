@@ -1,8 +1,18 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-10-03. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
+
+> **2026-10-03 note:** items 9–19 below still read `missing`/`stale` in this table, but each
+> already has an **open, unmerged** `spec/*` PR against `private-area-foundation` (#17–#27,
+> opened one per night from 2026-09-22 through 2026-10-02) — see the PR list, not this table, to
+> judge real progress. This is the same pattern the 2026-09-21 cleanup fixed once already: nightly
+> runs correctly avoided re-documenting a feature that already had an open PR (no duplicates this
+> time), but nobody has merged any of #17–#27, so the backlog has quietly piled back up to 11 open
+> PRs. **A human needs to review and merge (or close) #17–#27** before this table means anything
+> for items 9–19. This run documented item 20 (`marketing-cms.md`) since it's the next item with
+> no existing branch/PR at all.
 
 > **2026-09-21 cleanup note:** between 2026-09-05 and 2026-09-17, 15 separate nightly
 > systems-analyst runs opened spec PRs (#1–#15) against this branch, but none had been merged —
@@ -39,7 +49,7 @@
 | 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing | — | partnerships-tracking |
 | 18 | Payout checkpoints + reconcile + monitor | `payout-cron.md` | missing | — | payments-escrow |
 | 19 | Admin dashboard | `admin-dashboard.md` | missing | — | private-area |
-| 20 | CMS-backed marketing site (pages + globals) | `marketing-cms.md` | missing | — | frontend-marketing |
+| 20 | CMS-backed marketing site (pages + globals) | [`marketing-cms.md`](marketing-cms.md) | documented | 2026-10-03 | frontend-marketing |
 | 21 | Long-form content (posts / guides / legal) | `content-long.md` | missing | — | frontend-marketing |
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
@@ -55,6 +65,8 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+
+| CMS-backed marketing site (pages + globals) | [`marketing-cms.md`](marketing-cms.md) | 2026-10-03 | `SiteSettings.auth.signupUrl` field default (`/sign-in`) contradicts the code fallback default (`/register`) — the moment anyone saves that admin tab, every "sign up" button sitewide would silently start pointing new users at sign-in instead of registration; CMS `users` collection has no roles field, so every content editor has unrestricted write access to every global/collection; the contact form and newsletter form are both non-functional UI (convincing "success" state, nothing actually sent/stored/logged) |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)

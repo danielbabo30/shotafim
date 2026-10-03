@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-10-03 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -10,7 +10,7 @@
 | Private area | `src/app/(frontend)/(app)/dashboard/**` · `src/components/app/**` |
 | Registration + auth | `src/app/(frontend)/(auth)/**` (`register`, `register/roles`, `register/profile`, `register/complete`, `sign-in`) · `src/components/auth/**` · `src/app/api/auth/[...nextauth]/**` · `src/auth.ts` (Auth.js v5 config) · `src/proxy.ts` (edge/optimistic gate — see Guards row below) · `src/lib/{app-user,auth-helpers,admin-guard,registration,registration-schema}.ts` · `src/lib/actions/registration-actions.ts` — see `docs/spec/auth.md` + `docs/spec/registration.md` |
 | Guards / RBAC (cross-cutting — see `rbac-guards.md`) | No single system; per-file `roleKeys.includes(...)` checks + per-file `load<Resource>Owned`/`Party` ownership helpers inside `src/lib/actions/*.ts`. Only shared reusable guard: `requireAdmin()` (`src/lib/admin-guard.ts`). Dead duplicate: `src/lib/auth-helpers.ts` (`requireUser`/`requireRole` — unused, don't reach for it) |
-| CMS (Payload) | `src/collections/**` · `src/globals/**` · `src/app/(payload)/**` · `src/lib/{cms,payload}.ts` |
+| CMS (Payload) | `src/collections/**` · `src/globals/**` · `src/app/(payload)/**` · `src/lib/{cms,payload}.ts` — CMS infra + globals-only marketing pages (home/how-it-works/contact/solutions) in `docs/spec/marketing-cms.md`; long-form content (posts/guides/legal) still `missing` |
 | Data | `prisma/schema.prisma` · `prisma/migrations/**` · `prisma/seed/**` · `src/seed/**` · `src/payload-types.ts` (manual!) |
 | Money | models `EscrowHold/Transaction/Invoice/AdSpaceBooking/PayoutCheckpoint` · `src/lib/reports.ts` · `src/app/api/cron/{reconcile,checkpoints}/**` |
 | Partnerships + tracking | `src/lib/track/**` · `src/lib/partner-*.ts` · `src/lib/plugin-*.ts` · `src/app/api/{track,plugin}/**` · `wp-plugin/**` |
@@ -55,6 +55,28 @@
 - dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
 
 ## Notes from specced features
+- **CMS globals/collections live in the Postgres `payload` schema, not Prisma's `public` schema**
+  (`src/payload.config.ts:72-74`) — fully separate storage from every other feature's data model.
+  Every global here uses `access: { read: () => true }` and defines no write `access` override at
+  all, so Payload's default applies: any authenticated Payload `users` row (no roles field on that
+  collection) can write to *any* global/collection, not just ones in their remit. See
+  `docs/spec/marketing-cms.md` §7/§10.
+- **No cache-invalidation hook exists anywhere in the CMS config** — grepped `hooks:` across
+  `src/payload.config.ts` and every file in `src/globals/`+`src/collections/`, zero matches. The
+  only cache-busting is the marketing layout's `export const revalidate = 60`
+  (`src/app/(frontend)/(marketing)/layout.tsx:7`) — a saved edit can take up to 60s to appear live.
+- **`src/payload-types.ts` is hand-maintained, not generated** (`cms:types` script is documented
+  broken, CLAUDE.md) — every field added to a `src/globals/*.ts`/`src/collections/*.ts` file must
+  be mirrored there by hand, confirmed by the repeated header comment in every global file (e.g.
+  `src/globals/Homepage.ts:7`).
+- **The contact form and newsletter form are both UI-only** — `onSubmit` just flips local state to
+  a "success" view; neither calls any endpoint or persists anything (`src/components/marketing/
+  contact-form.tsx:58`, `newsletter-form.tsx:31`, both marked `// TODO`).
+- **`HeaderAuthActions` is a client-only auth check** (`src/components/marketing/
+  header-auth-actions.tsx:14-26`) — it `fetch("/api/auth/session")` itself rather than the server
+  component passing down session state, by design (keeps marketing pages static for SEO), but it
+  means every page load flashes logged-out UI first for a signed-in visitor.
+
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
 - **No shared `requireRole(key)` or ownership-scoped generic fetcher exists anywhere.** Every page/action hand-rolls its own `roleKeys.includes(...)` check and its own `findFirst`-scoped-by-`userId` ownership lookup. `requireAdmin()` is the only shared, reusable role-check function, and it's used in exactly two places (disputes). Full detail: `docs/spec/rbac-guards.md`.
 
