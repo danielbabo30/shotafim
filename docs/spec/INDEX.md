@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-10-04. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -16,6 +16,16 @@
 > PRs against this branch, not just this table** — a PR can exist and be worth merging even
 > though this file still shows `missing` until it lands.
 
+> **2026-10-04 note:** the backlog described above never actually stopped — it just stopped
+> duplicating. Each nightly run since 2026-09-22 correctly checked open PRs first and moved on
+> to the next *uncovered* item instead of re-documenting one that already had a PR, but **no PR
+> has been merged since this file's 2026-09-21 cleanup** (12 nights straight, PRs #17–#28, one
+> per queue item from #9 through #20 — see table below). That's every remaining item through
+> #20 sitting unmerged. Tonight's run found #9–#20 all already covered by an open PR and moved
+> on to #21 (`content-long.md`, PR opened from this run) — only #22 is left uncovered after
+> this. **Team lead: please triage/merge PRs #17–#28** before the queue runs dry; once #22 is
+> also covered, a nightly run has nothing left to document until something merges.
+
 ## Work queue for systems-analyst (priority order)
 
 | # | Feature | Spec file | Status | Updated | Domain agent |
@@ -28,19 +38,19 @@
 | 6 | Applications / pitches | [`applications.md`](applications.md) | documented | 2026-09-14 | private-area |
 | 7 | Contract room + contracts | [`contracts.md`](contracts.md) | documented | 2026-09-15 | private-area |
 | 8 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | documented | 2026-09-16 | private-area |
-| 9 | Messaging / conversations | `messages.md` | missing | — | private-area |
-| 10 | Disputes | `disputes.md` | missing | — | private-area |
-| 11 | Reviews | `reviews.md` | missing | — | private-area |
-| 12 | Escrow + Transactions + Invoices | `payments.md` | missing | — | payments-escrow |
-| 13 | AdSpace bookings + schedules | `ad-space-bookings.md` | missing | — | payments-escrow |
-| 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing | — | partnerships-tracking |
-| 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing | — | partnerships-tracking |
-| 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing | — | partnerships-tracking |
-| 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing | — | partnerships-tracking |
-| 18 | Payout checkpoints + reconcile + monitor | `payout-cron.md` | missing | — | payments-escrow |
-| 19 | Admin dashboard | `admin-dashboard.md` | missing | — | private-area |
-| 20 | CMS-backed marketing site (pages + globals) | `marketing-cms.md` | missing | — | frontend-marketing |
-| 21 | Long-form content (posts / guides / legal) | `content-long.md` | missing | — | frontend-marketing |
+| 9 | Messaging / conversations | `messages.md` | missing (PR [#17](https://github.com/danielbabo30/shotafim/pull/17) open, unmerged) | — | private-area |
+| 10 | Disputes | `disputes.md` | missing (PR [#18](https://github.com/danielbabo30/shotafim/pull/18) open, unmerged) | — | private-area |
+| 11 | Reviews | `reviews.md` | missing (PR [#19](https://github.com/danielbabo30/shotafim/pull/19) open, unmerged) | — | private-area |
+| 12 | Escrow + Transactions + Invoices | `payments.md` | missing (PR [#20](https://github.com/danielbabo30/shotafim/pull/20) open, unmerged) | — | payments-escrow |
+| 13 | AdSpace bookings + schedules | `ad-space-bookings.md` | missing (PR [#21](https://github.com/danielbabo30/shotafim/pull/21) open, unmerged) | — | payments-escrow |
+| 14 | Revenue-share partnerships (PartnerProgram) | `partner-programs.md` | missing (PR [#22](https://github.com/danielbabo30/shotafim/pull/22) open, unmerged) | — | partnerships-tracking |
+| 15 | Tracking engine (clicks, attribution) | `tracking-engine.md` | missing (PR [#23](https://github.com/danielbabo30/shotafim/pull/23) open, unmerged) | — | partnerships-tracking |
+| 16 | Anomaly detection + enforcement | `anomaly-enforcement.md` | missing (PR [#24](https://github.com/danielbabo30/shotafim/pull/24) open, unmerged) | — | partnerships-tracking |
+| 17 | WooCommerce plugin (bridgead-woo) | `woo-plugin.md` | missing (PR [#25](https://github.com/danielbabo30/shotafim/pull/25) open, unmerged) | — | partnerships-tracking |
+| 18 | Payout checkpoints + reconcile + monitor | `payout-cron.md` | missing (PR [#26](https://github.com/danielbabo30/shotafim/pull/26) open, unmerged) | — | payments-escrow |
+| 19 | Admin dashboard | `admin-dashboard.md` | missing (PR [#27](https://github.com/danielbabo30/shotafim/pull/27) open, unmerged) | — | private-area |
+| 20 | CMS-backed marketing site (pages + globals) | `marketing-cms.md` | missing (PR [#28](https://github.com/danielbabo30/shotafim/pull/28) open, unmerged) | — | frontend-marketing |
+| 21 | Long-form content (posts / guides / legal) | [`content-long.md`](content-long.md) | documented | 2026-10-04 | frontend-marketing |
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
@@ -55,6 +65,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Long-form content (posts / guides / legal) | [`content-long.md`](content-long.md) | 2026-10-04 | "Was this helpful?" (`ArticleFeedback`) collects nothing — pure client `useState`, no server write, and unrelated to the real `ContentFeedback` Prisma model; deleting a single seeded post/guide in `/admin` permanently 404s that slug with no per-item fallback (unlike `legal-pages`, which falls back per-document); every Payload `/admin` login has unrestricted write on all CMS content — no editor-vs-admin distinction inside the CMS at all |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)

@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-10-04 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -52,7 +52,24 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
-- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay`, `src/lib/auth-helpers.ts`'s guards, and `getLegalPages()` (`src/lib/legal.ts` — unused, `LegalNav` reads `LEGAL_PAGES` directly) are all confirmed-dead as of this pass
+
+## Long-form content (posts / guides / legal — see `docs/spec/content-long.md`)
+Pure Payload CMS, no Prisma involvement, no API routes (Local API only), fully public read
+(`access: { read: () => true }` on all three). Shared body-block vocabulary:
+`src/collections/content-blocks.ts` (`PROSE_BLOCKS`, 8 types) is the source of truth consumed by
+`Guides.ts`/`LegalPages.ts`; `Posts.ts` duplicates the same 8 types **inline** instead of
+importing it — second source of truth, kept in sync by hand. Rendering: one shared
+`ProseBlock` (`src/components/marketing/prose-blocks.tsx`) used by `ArticleBody`/`GuideBody`/the
+legal page directly; guides add `GuideSteps`/`GuideCaution` on top. Normalization
+(CMS block → render-ready block, stable heading/step anchors) happens server-side in
+`src/lib/post-content.ts` / `src/lib/guide-content.ts`, consumed by `src/lib/{posts,guides,
+legal}.ts`. Seed + runtime-fallback data lives in `*-defaults.ts` per type, loaded once by
+`src/seed/seed.ts` via the dev-only `GET /dev/seed` route — **the Posts/Guides fallback is
+all-or-nothing per collection** (falls back to seed only when the whole collection is empty),
+while **legal falls back per-document** — an inconsistency, see `content-long.md` §8/§10.
+CMS write access is flat: no role field on the Payload `users` collection, so every `/admin`
+login can edit every collection/global, unlike the app's own RBAC.
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
