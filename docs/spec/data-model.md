@@ -92,5 +92,11 @@ badge) — who writes the transition isn't traced yet (likely `admin-dashboard.m
   dev-seed fixtures. The ad-space "proof of broadcast" feature this model was built for does not
   exist in the app today — the flags computed from it are permanently `false`. See
   [`deliverables.md`](deliverables.md) §10 finding 1.
+- **`BusinessProfile` has no public read path.** `getBusinessDirectory`/`getBusinessDetail`
+  (`src/lib/business-directory.ts`) already query it safely (non-PII field selection, `status:
+  "ACTIVE", deletedAt: null`) but only power the gated `/dashboard/businesses` route. The public
+  `/explore` ("public index") route that queue item #22 names has no model/fetcher reference at
+  all — it's a static placeholder, not merely missing a public variant of an existing query. See
+  [`public-index.md`](public-index.md).
 
 _(remaining enums: systems-analyst fills this in per-enum while speccing the relevant feature)_

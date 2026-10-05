@@ -41,7 +41,7 @@
 | 19 | Admin dashboard | `admin-dashboard.md` | missing | — | private-area |
 | 20 | CMS-backed marketing site (pages + globals) | `marketing-cms.md` | missing | — | frontend-marketing |
 | 21 | Long-form content (posts / guides / legal) | `content-long.md` | missing | — | frontend-marketing |
-| 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
+| 22 | Public index / explore | [`public-index.md`](public-index.md) | documented | 2026-10-05 | frontend-marketing |
 
 ## Completed specs
 
@@ -55,6 +55,7 @@
 | Applications / pitches | [`applications.md`](applications.md) | 2026-09-14 | `submitApplication`'s update branch never carries over a changed ad-space-asset selection when completing a reservation invite (silently keeps the original); no way to decline an invitation or cancel one that was sent |
 | Contract room + contracts | [`contracts.md`](contracts.md) | 2026-09-15 | **`submitDeliverable`/`requestRevision`/`approveAndRelease` never check `Contract.compensationModel`** — calling them on a revenue-share contract would release the partnership deposit as a flat-fee payment (wrong recorded amount) and bypass the checkpoint-based commission payout system entirely; no row-level locking on the ad-space booking overlap check |
 | Deliverables + submissions + feedback | [`deliverables.md`](deliverables.md) | 2026-09-16 | **`ProofOfPlay` (ad-space "proof it broadcast") has zero write path anywhere in the app** — the dashboard flags computed from it are permanently `false`, so ad-space escrow release rests entirely on brand trust, not evidence; revision requests can be sent with no note/explanation; external-link deliverable submissions skip every safeguard (size/MIME/checksum) applied to uploads |
+| Public index / explore | [`public-index.md`](public-index.md) | 2026-10-05 | **The entire feature is an unimplemented static placeholder** — `/explore` has no fetcher, no Prisma model, no components, fully public (not in `proxy.ts`'s `PROTECTED_PREFIXES`); git history shows a deliberate de-scope (real directory moved behind auth to `/dashboard/businesses` on 2026-09-06), not a stalled build; a stale CTA (`solutions-ad-spaces-defaults.ts:17`) still promises an ad-space map that was never built here |
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
