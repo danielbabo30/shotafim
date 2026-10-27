@@ -1,6 +1,6 @@
 # Table of Contents — BridgeAd Specs
 
-> updated: 2026-09-21. Any code change to a documented feature → update its row here (date + status).
+> updated: 2026-10-27. Any code change to a documented feature → update its row here (date + status).
 > Code map: [`code-map.md`](code-map.md) · Data model: [`data-model.md`](data-model.md) · Template: [`_TEMPLATE.md`](_TEMPLATE.md)
 > Specs are in English. A one-time Hebrew spec pass is planned for end of development.
 
@@ -15,6 +15,24 @@
 > merged version. **Going forward: before starting the "next missing" item, check open `spec/*`
 > PRs against this branch, not just this table** — a PR can exist and be worth merging even
 > though this file still shows `missing` until it lands.
+
+> **2026-10-27 status note:** still nothing new to document. Every one of the 14 remaining queue
+> rows (#9–22) already has a clean, mergeable, unreviewed `spec/*` PR open against this branch
+> (#17–#30, opened one per night from 2026-09-22 to 2026-10-05, each checked against the open-PR
+> list before being written — zero duplicates). A 2026-10-14 status PR (#31) already flagged
+> this exact state and has itself sat open and unreviewed since. As of tonight, 13 more nights
+> have passed with **no merge activity at all** on any of #17–#31: PR #17 (`messages`, the
+> oldest) has now been open 35 days, PR #30 (`public-index`, the newest) 22 days, and #31 itself
+> 13 days. This is not a documentation gap the nightly job can close — it is a human-review
+> bottleneck, same shape as the 2026-09-21 cleanup above but now affecting the *entire* remaining
+> backlog at once. The single next action that unblocks it: **a human merging from the open
+> list, in priority order** — `messages` (#17) → `disputes` (#18) → `reviews` (#19) →
+> `payments` (#20) → `ad-space-bookings` (#21) → `partner-programs` (#22) →
+> `tracking-engine` (#23) → `anomaly-enforcement` (#24) → `woo-plugin` (#25) →
+> `payout-cron` (#26) → `admin-dashboard` (#27) → `marketing-cms` (#28) → `content-long` (#29) →
+> `public-index` (#30) — then closing/superseding #31 and this note. Until at least #17 merges,
+> future nightly runs should keep checking the open-PR list and writing nothing new, exactly as
+> the last 13 runs did, rather than opening a 15th unmerged PR.
 
 ## Work queue for systems-analyst (priority order)
 
