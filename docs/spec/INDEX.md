@@ -16,6 +16,23 @@
 > PRs against this branch, not just this table** — a PR can exist and be worth merging even
 > though this file still shows `missing` until it lands.
 
+> **2026-11-03 status note:** the backlog described below (first reported 2026-10-14, PR #31) is
+> still unchanged — **zero merge or close activity on any of #17–#34** across five consecutive
+> nightly checks now (10-14, 10-27, 10-30, 11-02, and tonight). All 14 remaining queue rows
+> (#9–22, `messages` through `public-index`) each already have a clean, unreviewed `spec/*` PR
+> open against this branch (#17–#30); PR #17 (`messages`, the oldest) has now been open **42
+> days**, PR #30 (`public-index`, the newest feature spec) **29 days**. The four prior
+> status-only PRs that reported this same stall — #31, #32, #33, #34 — are themselves still open
+> and unmerged. Per the 2026-09-21 note's own rule, this run checked the open-PR list before
+> picking a "next missing" item and is writing nothing new rather than opening a duplicate (what
+> would be an 18th) spec PR. **The queue cannot move until a human merges from the open list, in
+> priority order:** `messages` (#17) → `disputes` (#18) → `reviews` (#19) → `payments` (#20) →
+> `ad-space-bookings` (#21) → `partner-programs` (#22) → `tracking-engine` (#23) →
+> `anomaly-enforcement` (#24) → `woo-plugin` (#25) → `payout-cron` (#26) → `admin-dashboard`
+> (#27) → `marketing-cms` (#28) → `content-long` (#29) → `public-index` (#30) — after which
+> #31–#34 and this note become superseded and can be closed. Future nightly runs: keep checking
+> the open-PR list and write nothing new until at least #17 merges.
+
 ## Work queue for systems-analyst (priority order)
 
 | # | Feature | Spec file | Status | Updated | Domain agent |
