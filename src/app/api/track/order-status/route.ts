@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateTrackRequest } from "@/lib/track/auth";
+import { authenticateTrackRequest, authErrorBody } from "@/lib/track/auth";
 import { orderStatusPayloadSchema } from "@/lib/track/schemas";
 import { reverseCommission } from "@/lib/track/ingest";
 import { isStableOrderStatus } from "@/lib/track/commission";
@@ -9,7 +9,7 @@ import { badRequest, fromThrown, ok, parseJsonBody } from "@/lib/track/http";
 /** POST /api/track/order-status — refund / cancel / completed (§4). חשבונאות אוטומטית, לא מחלוקת. */
 export async function POST(request: Request) {
   const auth = await authenticateTrackRequest(request);
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok) return NextResponse.json(authErrorBody(auth), { status: auth.status });
 
   const parsed = orderStatusPayloadSchema.safeParse(parseJsonBody(auth.rawBody));
   if (!parsed.success) return badRequest(parsed.error);

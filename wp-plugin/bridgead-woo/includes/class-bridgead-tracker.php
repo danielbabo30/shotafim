@@ -82,12 +82,54 @@ class Bridgead_Tracker {
 			$payload['country'] = $country;
 		}
 
-		// לא חוסמים את הבקשה — האירוע נכנס לתור ונשלח ברקע.
-		$api->enqueue_or_send(
-			'/api/track/click',
-			$payload,
-			'click:' . $ref . ':' . floor( time() / 30 )
-		);
+		// B-2: לא חוסמים את בקשת המבקר. האירוע נכנס לתור (ערובה לאי-אובדן) ונשלח אחרי
+		// שהתגובה נשלחה למבקר (shutdown + finish_request), או — אם אין finish_request —
+		// ע"י ריצת cron ברקע. מפתח dedup כולל את ה-ipHash כדי ששני מבקרים לא יתמזגו (B-8).
+		$key = 'click:' . $ref . ':' . floor( time() / 30 ) . ':' . substr( md5( $payload['ipHash'] . ( isset( $payload['uaHash'] ) ? $payload['uaHash'] : '' ) ), 0, 12 );
+		if ( $api->enqueue_only( '/api/track/click', $payload, $key ) ) {
+			$this->schedule_background_send();
+		}
+	}
+
+	private static $shutdown_registered = false;
+
+	private function schedule_background_send() {
+		if ( self::$shutdown_registered ) {
+			return;
+		}
+		self::$shutdown_registered = true;
+		add_action( 'shutdown', array( __CLASS__, 'send_after_response' ), 999 );
+	}
+
+	/**
+	 * רץ ב-shutdown. אם אפשר לסגור את החיבור למבקר (PHP-FPM / LiteSpeed) — שולחים עכשיו
+	 * (בלי שהמבקר ממתין). אחרת מתזמנים ניקוז תור מיידי ב-WP-Cron (loopback לא חוסם).
+	 */
+	public static function send_after_response() {
+		$finished = false;
+		if ( function_exists( 'fastcgi_finish_request' ) ) {
+			// ללא session lock / output buffers פתוחים שיעכבו את הסגירה.
+			if ( function_exists( 'session_write_close' ) ) {
+				@session_write_close(); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			}
+			$finished = (bool) fastcgi_finish_request();
+		} elseif ( function_exists( 'litespeed_finish_request' ) ) {
+			litespeed_finish_request();
+			$finished = true;
+		}
+
+		if ( $finished ) {
+			Bridgead_Queue::flush();
+			return;
+		}
+
+		// אין דרך לשחרר את המבקר — מתזמנים ניקוז ברקע ולא שולחים כאן.
+		if ( ! wp_next_scheduled( Bridgead_Cron::FLUSH_NOW ) ) {
+			wp_schedule_single_event( time(), Bridgead_Cron::FLUSH_NOW );
+		}
+		if ( function_exists( 'spawn_cron' ) && ! ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) ) {
+			spawn_cron(); // בקשת loopback לא חוסמת (timeout 0.01)
+		}
 	}
 
 	/**

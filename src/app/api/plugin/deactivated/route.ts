@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateTrackRequest } from "@/lib/track/auth";
+import { authenticateTrackRequest, authErrorBody } from "@/lib/track/auth";
 import { deactivatedPayloadSchema } from "@/lib/track/schemas";
 import { MONITOR_GRACE_HOURS } from "@/lib/partner-constants";
 import { emailSiteAdminTrackingOffline, notifyPartnership } from "@/lib/track/notify";
@@ -9,7 +9,7 @@ import { badRequest, ok, parseJsonBody } from "@/lib/track/http";
 /** POST /api/plugin/deactivated — register_deactivation_hook (§5). best-effort. */
 export async function POST(request: Request) {
   const auth = await authenticateTrackRequest(request);
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok) return NextResponse.json(authErrorBody(auth), { status: auth.status });
 
   const parsed = deactivatedPayloadSchema.safeParse(parseJsonBody(auth.rawBody));
   if (!parsed.success) return badRequest(parsed.error);
@@ -25,22 +25,31 @@ export async function POST(request: Request) {
     select: { id: true },
   });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.trackedSite.update({
+  // מונע התראות כפולות אם ה-hook נורה שוב בלי heartbeat באמצע
+  const open = await prisma.pluginAlert.findFirst({
+    where: { siteId: auth.site.id, type: "DEACTIVATED", resolvedAt: null },
+    select: { id: true },
+  });
+  await prisma.$transaction([
+    prisma.trackedSite.update({
       where: { id: auth.site.id },
       data: { status: "DEACTIVATED", offlineAt: now },
-    });
-    await tx.pluginAlert.create({
-      data: {
-        siteId: auth.site.id,
-        programId: programs[0]?.id ?? null,
-        type: "DEACTIVATED",
-        detail: parsed.data.reason ?? null,
-        notifiedAt: now,
-        graceEndsAt,
-      },
-    });
-  });
+    }),
+    ...(open
+      ? []
+      : [
+          prisma.pluginAlert.create({
+            data: {
+              siteId: auth.site.id,
+              programId: programs[0]?.id ?? null,
+              type: "DEACTIVATED",
+              detail: parsed.data.reason ?? null,
+              notifiedAt: now,
+              graceEndsAt,
+            },
+          }),
+        ]),
+  ]);
 
   for (const p of programs) {
     await notifyPartnership(p.id, "TRACKING_OFFLINE", {}, "both");

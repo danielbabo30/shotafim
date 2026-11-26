@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateTrackRequest } from "@/lib/track/auth";
+import { authenticateTrackRequest, authErrorBody } from "@/lib/track/auth";
 import { orderPayloadSchema, validateOrderHashes } from "@/lib/track/schemas";
 import { ingestOrder } from "@/lib/track/ingest";
 import { accepted, badRequest, fromThrown, ok, parseJsonBody } from "@/lib/track/http";
@@ -7,7 +7,7 @@ import { accepted, badRequest, fromThrown, ok, parseJsonBody } from "@/lib/track
 /** POST /api/track/order — הזמנה משויכת מ-woocommerce_payment_complete (§4). idempotent. */
 export async function POST(request: Request) {
   const auth = await authenticateTrackRequest(request);
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok) return NextResponse.json(authErrorBody(auth), { status: auth.status });
 
   const parsed = orderPayloadSchema.safeParse(parseJsonBody(auth.rawBody));
   if (!parsed.success) return badRequest(parsed.error);

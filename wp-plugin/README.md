@@ -72,3 +72,9 @@ headers:
 
 > אם החוזה הסופי משתנה — העדכונים: נתיבים/כותרות ב-`class-bridgead-api.php`,
 > מבני payload ב-`class-bridgead-orders.php` / `class-bridgead-tracker.php` / `class-bridgead-cron.php`.
+
+## שגיאות אימות (401) — תוסף 0.2.2+
+גוף תשובת 401 כולל `code` (בלי סודות): `missing_headers` · `clock_skew` (+`serverTime` ב-unix seconds; התוסף שומר היסט `bridgead_clock_offset` ומנסה שוב פעם אחת, מוגבל ל-±24h) · `unknown_site` · `bad_signature` · `site_disconnected` (ניתוק מפורש בדשבורד).
+כל 401 למעט `site_disconnected` נשאר בתור עם backoff (8 ניסיונות); `site_disconnected` עוצר שליחה ומסמן מצב במסך ההגדרות (`bridgead_conn_state`).
+אתר שכובה ע"י התוסף (`/api/plugin/deactivated`) ממשיך לקבל בקשות חתומות תקפות; `heartbeat` מחזיר אותו ל-`ACTIVE` וסוגר את ה-PluginAlert.
+שליחת קליק אינה חוסמת את המבקר: תור + `shutdown` אחרי `fastcgi_finish_request`/`litespeed_finish_request`, ובהיעדרם — ניקוז ב-WP-Cron (`bridgead_flush_now`).

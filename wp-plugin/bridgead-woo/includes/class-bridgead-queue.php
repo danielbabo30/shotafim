@@ -54,22 +54,43 @@ class Bridgead_Queue {
 		return count( self::all() );
 	}
 
+	const LOCK_TRANSIENT = 'bridgead_flush_lock';
+	const FLUSH_BUDGET   = 25; // שניות — מגבלת זמן לריצה אחת (השאר ממשיך בריצה הבאה)
+
 	/**
-	 * מנסה לשלוח את כל הפריטים שהגיע זמנם. נקרא מ-cron.
+	 * מנסה לשלוח את כל הפריטים שהגיע זמנם. נקרא מ-cron / מ-shutdown אחרי קליק.
+	 * נעילה קצרה מונעת ריצות מקבילות ששולחות כפול ודורסות את ה-option.
 	 */
 	public static function flush() {
-		$queue = self::all();
-		if ( empty( $queue ) ) {
+		if ( empty( self::all() ) ) {
 			return;
 		}
+		if ( get_transient( self::LOCK_TRANSIENT ) ) {
+			return;
+		}
+		set_transient( self::LOCK_TRANSIENT, 1, 60 );
 
-		$api  = Bridgead_Api::instance();
-		$now  = time();
-		$kept = array();
+		try {
+			self::flush_locked();
+		} finally {
+			delete_transient( self::LOCK_TRANSIENT );
+		}
+	}
 
-		foreach ( $queue as $item ) {
+	private static function flush_locked() {
+		$api     = Bridgead_Api::instance();
+		$now     = time();
+		$started = microtime( true );
+		$kept    = array();
+		$queue   = self::all();
+
+		foreach ( $queue as $idx => $item ) {
 			if ( ! empty( $item['next_at'] ) && $item['next_at'] > $now ) {
 				$kept[] = $item; // עדיין ב-backoff
+				continue;
+			}
+			if ( microtime( true ) - $started > self::FLUSH_BUDGET ) {
+				$kept[] = $item; // נגמר תקציב הזמן — בריצה הבאה
 				continue;
 			}
 
@@ -79,7 +100,18 @@ class Bridgead_Queue {
 				continue; // הצליח — מסירים מהתור
 			}
 
-			$item['tries']   = (int) $item['tries'] + 1;
+			if ( $api->is_disconnected() ) {
+				// החנות נותקה בצד BridgeAd — עוצרים; משאירים את כל מה שנותר בתור.
+				$kept = array_merge( $kept, array_slice( $queue, $idx ) );
+				break;
+			}
+
+			if ( Bridgead_Api::is_permanent( $result ) ) {
+				error_log( sprintf( 'BridgeAd: dropping event %s — permanent failure (%d %s)', $item['path'], (int) $result['code'], $result['reason'] ) );
+				continue;
+			}
+
+			$item['tries']    = (int) $item['tries'] + 1;
 			$item['last_err'] = $result['error'];
 
 			if ( $item['tries'] >= self::MAX_TRIES ) {
@@ -89,9 +121,20 @@ class Bridgead_Queue {
 			}
 
 			// exponential backoff: 1, 2, 4, 8 ... דקות, מוגבל לשעה
-			$delay          = min( 3600, 60 * pow( 2, $item['tries'] - 1 ) );
+			$delay           = min( 3600, 60 * pow( 2, $item['tries'] - 1 ) );
 			$item['next_at'] = $now + $delay;
 			$kept[]          = $item;
+		}
+
+		// מיזוג: פריטים שנוספו לתור בזמן הריצה (ע"י בקשות מקבילות) נשמרים.
+		$known = array();
+		foreach ( $queue as $q ) {
+			$known[ $q['key'] ] = true;
+		}
+		foreach ( self::all() as $q ) {
+			if ( ! isset( $known[ $q['key'] ] ) ) {
+				$kept[] = $q;
+			}
 		}
 
 		update_option( self::OPTION, $kept, false );

@@ -149,7 +149,7 @@ class Bridgead_Api {
 	/**
 	 * heartbeat מלא + קליטת privacyKey. משמש cron / בדיקת חיבור / שמירת צימוד.
 	 */
-	public function send_heartbeat( $orders_since = 0 ) {
+	public function send_heartbeat( $orders_since = 0, $args = array() ) {
 		$result = $this->post(
 			'/api/plugin/heartbeat',
 			array_merge(
@@ -163,7 +163,8 @@ class Bridgead_Api {
 					'sentAt'            => gmdate( 'c' ),
 				),
 				$this->heartbeat_extra()
-			)
+			),
+			$args
 		);
 		$this->store_privacy_key_from( $result );
 		return $result;
@@ -177,19 +178,69 @@ class Bridgead_Api {
 		return $c['site_id'] . gmdate( 'Y-m-d' );
 	}
 
+	const CLOCK_OFFSET_OPTION = 'bridgead_clock_offset';
+	const CONN_STATE_OPTION   = 'bridgead_conn_state';
+	const MAX_CLOCK_OFFSET    = 86400; // ±24 שעות
+
 	/**
-	 * בקשת POST חתומה.
-	 *
-	 * @return array{ok:bool, code:int, body:mixed, error:string}
+	 * היסט שעון (שניות) בין שעון החנות לשעון השרת, כפי שנלמד מתשובת 401 clock_skew (B-3).
 	 */
-	public function post( $path, $payload, $args = array() ) {
+	public function clock_offset() {
+		return (int) get_option( self::CLOCK_OFFSET_OPTION, 0 );
+	}
+
+	private function signing_time() {
+		return time() + $this->clock_offset();
+	}
+
+	/**
+	 * מצב החיבור האחרון שנצפה: '' (תקין) | 'disconnected' | 'rejected'. מוצג למנהל במסך ההגדרות.
+	 *
+	 * @return array{state:string, code:string, at:int}
+	 */
+	public function connection_state() {
+		$v = get_option( self::CONN_STATE_OPTION, array() );
+		return is_array( $v ) && ! empty( $v['state'] )
+			? array(
+				'state' => (string) $v['state'],
+				'code'  => isset( $v['code'] ) ? (string) $v['code'] : '',
+				'at'    => isset( $v['at'] ) ? (int) $v['at'] : 0,
+			)
+			: array( 'state' => '', 'code' => '', 'at' => 0 );
+	}
+
+	public function is_disconnected() {
+		$s = $this->connection_state();
+		return 'disconnected' === $s['state'];
+	}
+
+	public function set_connection_state( $state, $code = '' ) {
+		if ( '' === $state ) {
+			if ( false !== get_option( self::CONN_STATE_OPTION, false ) ) {
+				delete_option( self::CONN_STATE_OPTION );
+			}
+			return;
+		}
+		$cur = $this->connection_state();
+		if ( $cur['state'] === $state && $cur['code'] === $code ) {
+			return; // בלי כתיבה מיותרת ל-DB בכל בקשה
+		}
+		update_option( self::CONN_STATE_OPTION, array( 'state' => $state, 'code' => $code, 'at' => time() ), false );
+	}
+
+	/**
+	 * בקשת POST חתומה. 401 עם code=clock_skew → מתקן היסט שעון ומנסה שוב פעם אחת (B-3).
+	 *
+	 * @return array{ok:bool, code:int, body:mixed, error:string, reason:string}
+	 */
+	public function post( $path, $payload, $args = array(), $_retried = false ) {
 		$c = $this->credentials();
 		if ( '' === $c['site_id'] || '' === $c['api_key'] ) {
-			return array( 'ok' => false, 'code' => 0, 'body' => null, 'error' => 'not_configured' );
+			return array( 'ok' => false, 'code' => 0, 'body' => null, 'error' => 'not_configured', 'reason' => 'not_configured' );
 		}
 
 		$body      = wp_json_encode( $payload );
-		$timestamp = (string) time();
+		$timestamp = (string) $this->signing_time();
 		$signature = 'sha256=' . hash_hmac( 'sha256', $timestamp . '.' . $body, $c['api_key'] );
 
 		$response = wp_remote_post(
@@ -213,34 +264,89 @@ class Bridgead_Api {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			return array( 'ok' => false, 'code' => 0, 'body' => null, 'error' => $response->get_error_message() );
+			return array( 'ok' => false, 'code' => 0, 'body' => null, 'error' => $response->get_error_message(), 'reason' => 'network' );
 		}
 
 		$code   = (int) wp_remote_retrieve_response_code( $response );
 		$parsed = json_decode( wp_remote_retrieve_body( $response ), true );
+		$reason = ( is_array( $parsed ) && ! empty( $parsed['code'] ) && is_string( $parsed['code'] ) ) ? $parsed['code'] : '';
+
+		// סטיית שעון: השרת מחזיר את שעונו; מתקנים היסט (מוגבל ל-±24h) ושולחים שוב פעם אחת.
+		if ( 401 === $code && 'clock_skew' === $reason && ! $_retried && is_array( $parsed ) && isset( $parsed['serverTime'] ) && is_numeric( $parsed['serverTime'] ) ) {
+			$offset = (int) $parsed['serverTime'] - time();
+			if ( abs( $offset ) <= self::MAX_CLOCK_OFFSET ) {
+				update_option( self::CLOCK_OFFSET_OPTION, $offset, false );
+				return $this->post( $path, $payload, $args, true );
+			}
+		}
+
+		$ok = $code >= 200 && $code < 300;
+		if ( $ok ) {
+			$this->set_connection_state( '' );
+		} elseif ( 401 === $code && 'site_disconnected' === $reason ) {
+			$this->set_connection_state( 'disconnected', $reason );
+		} elseif ( 401 === $code ) {
+			$this->set_connection_state( 'rejected', '' !== $reason ? $reason : 'unauthorized' );
+		}
 
 		return array(
-			'ok'    => $code >= 200 && $code < 300,
-			'code'  => $code,
-			'body'  => $parsed,
-			'error' => ( $code >= 200 && $code < 300 ) ? '' : 'http_' . $code,
+			'ok'     => $ok,
+			'code'   => $code,
+			'body'   => $parsed,
+			'error'  => $ok ? '' : ( '' !== $reason ? 'http_' . $code . ':' . $reason : 'http_' . $code ),
+			'reason' => $reason,
 		);
 	}
 
 	/**
-	 * שולח אירוע — במקרה כשל (חוץ מ-4xx שאינו 404/429), מוסיף לתור ה-retry.
+	 * האם כשל הוא קבוע (אין טעם לנסות שוב): 400/409/422, או 401 "אתר מנותק".
+	 * 401 אחר (שעון/חתימה) אינו קבוע — נשאר בתור עם backoff (B-3).
+	 */
+	public static function is_permanent( $result ) {
+		$code = (int) $result['code'];
+		if ( in_array( $code, array( 400, 409, 422 ), true ) ) {
+			return true;
+		}
+		return 401 === $code && isset( $result['reason'] ) && 'site_disconnected' === $result['reason'];
+	}
+
+	/**
+	 * שולח אירוע — כשל לא-קבוע נכנס לתור ה-retry. מוסיף למערך התוצאה:
+	 *   queued  — האירוע בתור (יישלח בהמשך; מותר לסמן כמדווח)
+	 *   dropped — נזרק (כשל קבוע); לא לסמן כמדווח.
 	 */
 	public function enqueue_or_send( $path, $payload, $idempotency_key ) {
+		if ( $this->is_disconnected() ) {
+			// החנות נותקה בצד BridgeAd — לא צוברים אירועים; heartbeat ממשיך לבדוק אם חזרנו.
+			$r = array( 'ok' => false, 'code' => 401, 'body' => null, 'error' => 'site_disconnected', 'reason' => 'site_disconnected' );
+			$r['queued']  = false;
+			$r['dropped'] = true;
+			return $r;
+		}
+
 		$result = $this->post( $path, $payload );
+		$result['queued']  = false;
+		$result['dropped'] = false;
 		if ( ! $result['ok'] ) {
-			$code = (int) $result['code'];
-			$permanent = in_array( $code, array( 400, 401, 409, 422 ), true );
-			if ( ! $permanent ) {
+			if ( ! self::is_permanent( $result ) ) {
 				Bridgead_Queue::add( $path, $payload, $idempotency_key );
+				$result['queued'] = true;
 			} else {
-				error_log( sprintf( 'BridgeAd: %s rejected (%d) — not retrying', $path, $code ) );
+				$result['dropped'] = true;
+				error_log( sprintf( 'BridgeAd: %s rejected (%d %s) — not retrying', $path, (int) $result['code'], $result['reason'] ) );
 			}
 		}
 		return $result;
+	}
+
+	/**
+	 * רק מכניס לתור (בלי שליחה) — לנתיבים שאסור שיחסמו את בקשת המבקר.
+	 */
+	public function enqueue_only( $path, $payload, $idempotency_key ) {
+		if ( $this->is_disconnected() ) {
+			return false;
+		}
+		Bridgead_Queue::add( $path, $payload, $idempotency_key );
+		return true;
 	}
 }

@@ -84,6 +84,10 @@ class Bridgead_Settings {
 
 		update_option( 'bridgead_settings', $settings );
 
+		// קוד צימוד חדש/שמירה = מנקים מצב "מנותק"/"נדחה" ותיקון שעון ישן; heartbeat יקבע מחדש.
+		Bridgead_Api::instance()->set_connection_state( '' );
+		delete_option( Bridgead_Api::CLOCK_OFFSET_OPTION );
+
 		// SEC-P-13: חנות אחרת → מפתח פרטיות אחר. מנקים, ומבקשים מהשרת מפתח לצימוד החדש.
 		if ( $old_site_id !== $settings['site_id'] ) {
 			delete_option( Bridgead_Api::PRIVACY_OPTION );
@@ -135,6 +139,23 @@ class Bridgead_Settings {
 
 			<?php if ( isset( $_GET['saved'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'ההגדרות נשמרו.', 'bridgead-woo' ); ?></p></div>
+			<?php endif; ?>
+
+			<?php
+			$conn = Bridgead_Api::instance()->connection_state();
+			if ( 'disconnected' === $conn['state'] ) :
+				?>
+				<div class="notice notice-error"><p><?php esc_html_e( 'החנות נותקה בצד BridgeAd — אירועים חדשים אינם נשלחים. הדבק קוד צימוד חדש מהאזור האישי כדי לחבר מחדש.', 'bridgead-woo' ); ?></p></div>
+			<?php elseif ( 'rejected' === $conn['state'] ) : ?>
+				<div class="notice notice-warning"><p>
+					<?php
+					echo esc_html(
+						'clock_skew' === $conn['code']
+							? __( 'BridgeAd דחה את הבקשות בגלל סטיית שעון. בדקו את שעון השרת; האירועים נשמרים בתור ויישלחו מחדש.', 'bridgead-woo' )
+							: __( 'BridgeAd דחה את חתימת הבקשות (קוד צימוד לא תקף?). האירועים נשמרים בתור ויישלחו מחדש. אם זה נמשך — הדבק קוד צימוד חדש.', 'bridgead-woo' )
+					);
+					?>
+				</p></div>
 			<?php endif; ?>
 
 			<div class="bridgead-status <?php echo $verified ? 'is-ok' : 'is-idle'; ?>" id="bridgead-status">

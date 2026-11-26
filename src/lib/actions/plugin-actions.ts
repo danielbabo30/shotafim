@@ -116,9 +116,19 @@ export async function disconnectStore(formData: FormData): Promise<void> {
   if (!ctx) return;
 
   const siteId = String(formData.get("siteId") ?? "");
-  await prisma.trackedSite.updateMany({
-    where: { id: siteId, businessId: ctx.businessId },
-    data: { status: "DEACTIVATED" },
+  // ניתוק ע"י המשתמש = DEACTIVATED בלי PluginAlert DEACTIVATED פתוחה (כך auth.ts מבחין
+  // בינו לבין כיבוי ע"י התוסף, שניתן להתאושש ממנו). לכן סוגרים התראות כאלה קיימות.
+  await prisma.$transaction(async (tx) => {
+    const res = await tx.trackedSite.updateMany({
+      where: { id: siteId, businessId: ctx.businessId },
+      data: { status: "DEACTIVATED" },
+    });
+    if (res.count > 0) {
+      await tx.pluginAlert.updateMany({
+        where: { siteId, type: "DEACTIVATED", resolvedAt: null },
+        data: { resolvedAt: new Date() },
+      });
+    }
   });
 
   revalidatePath("/dashboard/settings");

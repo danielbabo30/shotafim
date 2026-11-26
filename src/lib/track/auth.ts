@@ -15,7 +15,28 @@ import { decryptApiKey, safeSignatureEqual, sha256Hex, trackSignature } from "@/
  */
 
 export type TrackAuthResult =
-  { ok: true; site: TrackedSite; rawBody: string } | { ok: false; status: number; error: string };
+  | { ok: true; site: TrackedSite; rawBody: string }
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      /** קוד מכונה יציב — התוסף מבחין לפיו בין שגיאות 401 (B-3). בלי סודות. */
+      code?: TrackAuthErrorCode;
+      /** שעון השרת (unix seconds) — רק עם clock_skew, כדי שהתוסף יתקן היסט */
+      serverTime?: number;
+    };
+
+export type TrackAuthErrorCode =
+  "missing_headers" | "clock_skew" | "unknown_site" | "bad_signature" | "site_disconnected";
+
+/** גוף JSON אחיד לשגיאת אימות (כולל code/serverTime אם קיימים) */
+export function authErrorBody(auth: Extract<TrackAuthResult, { ok: false }>) {
+  return {
+    error: auth.error,
+    ...(auth.code ? { code: auth.code } : {}),
+    ...(auth.serverTime != null ? { serverTime: auth.serverTime } : {}),
+  };
+}
 
 /** תקרות גוף בקשה (SEC-P-07): digest עד 2MB, שאר ה-endpoints עד 256KB */
 const MAX_BODY_BYTES = 256 * 1024;
@@ -48,12 +69,18 @@ export async function authenticateTrackRequest(request: Request): Promise<TrackA
   const signature = request.headers.get("x-bridgead-signature");
 
   if (!siteId || !timestamp || !signature) {
-    return { ok: false, status: 401, error: "חסרות כותרות אימות." };
+    return { ok: false, status: 401, error: "חסרות כותרות אימות.", code: "missing_headers" };
   }
 
   const ts = Number(timestamp);
   if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > HMAC_SKEW_SECONDS) {
-    return { ok: false, status: 401, error: "חותמת זמן פגה או לא תקינה." };
+    return {
+      ok: false,
+      status: 401,
+      error: "חותמת זמן פגה או לא תקינה.",
+      code: "clock_skew",
+      serverTime: Math.floor(Date.now() / 1000),
+    };
   }
 
   const rawBody = await request.text();
@@ -62,8 +89,8 @@ export async function authenticateTrackRequest(request: Request): Promise<TrackA
   }
 
   const site = await prisma.trackedSite.findUnique({ where: { id: siteId } });
-  if (!site || site.status === "DEACTIVATED") {
-    return { ok: false, status: 401, error: "אתר לא מוכר או מנותק." };
+  if (!site) {
+    return { ok: false, status: 401, error: "אתר לא מוכר.", code: "unknown_site" };
   }
 
   let apiKey: string;
@@ -80,7 +107,21 @@ export async function authenticateTrackRequest(request: Request): Promise<TrackA
 
   const expected = trackSignature(apiKey, timestamp, rawBody);
   if (!safeSignatureEqual(expected, signature)) {
-    return { ok: false, status: 401, error: "חתימת HMAC לא תקינה." };
+    return { ok: false, status: 401, error: "חתימת HMAC לא תקינה.", code: "bad_signature" };
+  }
+
+  // B-1: DEACTIVATED מכסה שני מצבים. כבוי ע"י התוסף (קיימת PluginAlert DEACTIVATED פתוחה) —
+  // בקשה חתומה תקפה מתקבלת (heartbeat משחזר ל-ACTIVE; קליקים/הזמנות לא נזרקים).
+  // ניתוק מפורש ע"י המשתמש (disconnectStore סוגר את ההתראות) — חסום.
+  // נבדק רק אחרי חתימה תקפה כדי לא לחשוף מצב אתר לגורם לא מאומת.
+  if (site.status === "DEACTIVATED") {
+    const byPlugin = await prisma.pluginAlert.findFirst({
+      where: { siteId: site.id, type: "DEACTIVATED", resolvedAt: null },
+      select: { id: true },
+    });
+    if (!byPlugin) {
+      return { ok: false, status: 401, error: "האתר נותק.", code: "site_disconnected" };
+    }
   }
 
   // throttle לפי אתר — רק אחרי חתימה תקפה (כדי ש-siteId ידוע לא ישמש לשריפת המכסה)

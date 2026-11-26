@@ -64,14 +64,18 @@ class Bridgead_Orders {
 			$payload['refCode'] = $ref;
 		}
 
-		Bridgead_Api::instance()->enqueue_or_send(
+		$result = Bridgead_Api::instance()->enqueue_or_send(
 			'/api/track/order',
 			$payload,
 			'order:' . $order->get_id()
 		);
 
-		$order->update_meta_data( '_bridgead_reported', 1 );
-		$order->save();
+		// B-3: מסמנים "דווח" רק אם נשלח בהצלחה או נכנס לתור (יישלח בהמשך). נדחה קבוע / אתר מנותק →
+		// לא מסמנים, כדי שניסיון עתידי (או ה-digest) לא יתעלם מההזמנה.
+		if ( ! empty( $result['ok'] ) || ! empty( $result['queued'] ) ) {
+			$order->update_meta_data( '_bridgead_reported', 1 );
+			$order->save();
+		}
 	}
 
 	/**
@@ -83,6 +87,8 @@ class Bridgead_Orders {
 	 * @param WC_Order $order
 	 */
 	public function on_status_changed( $order_id, $from, $to, $order ) {
+		// B-7: האובייקט שמגיע מה-hook עלול להיות ישן (ה-meta נכתב ב-on_paid באותה בקשה) — טוענים מחדש.
+		$order = wc_get_order( $order_id );
 		if ( ! $order || ! $order->get_meta( '_bridgead_reported' ) ) {
 			return;
 		}

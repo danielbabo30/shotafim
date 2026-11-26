@@ -13,22 +13,24 @@ class Bridgead_Cron {
 	const HEARTBEAT = 'bridgead_heartbeat';
 	const DIGEST    = 'bridgead_digest';
 	const FLUSH     = 'bridgead_flush_queue';
+	const FLUSH_NOW = 'bridgead_flush_now'; // חד-פעמי, אחרי קליק כשאי-אפשר לשחרר את המבקר (B-2)
 
 	public function __construct() {
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_schedules' ) );
 		add_action( self::HEARTBEAT, array( $this, 'heartbeat' ) );
 		add_action( self::DIGEST, array( $this, 'digest' ) );
 		add_action( self::FLUSH, array( 'Bridgead_Queue', 'flush' ) );
+		add_action( self::FLUSH_NOW, array( 'Bridgead_Queue', 'flush' ) );
 	}
 
 	public static function add_schedules( $schedules ) {
 		$schedules['bridgead_6h'] = array(
 			'interval' => 6 * HOUR_IN_SECONDS,
-			'display'  => __( 'כל 6 שעות (BridgeAd)', 'bridgead-woo' ),
+			'display'  => 'כל 6 שעות (BridgeAd)',
 		);
 		$schedules['bridgead_5min'] = array(
 			'interval' => 5 * MINUTE_IN_SECONDS,
-			'display'  => __( 'כל 5 דקות (BridgeAd)', 'bridgead-woo' ),
+			'display'  => 'כל 5 דקות (BridgeAd)',
 		);
 		return $schedules;
 	}
@@ -46,7 +48,7 @@ class Bridgead_Cron {
 	}
 
 	public static function unschedule() {
-		foreach ( array( self::HEARTBEAT, self::DIGEST, self::FLUSH ) as $hook ) {
+		foreach ( array( self::HEARTBEAT, self::DIGEST, self::FLUSH, self::FLUSH_NOW ) as $hook ) {
 			$timestamp = wp_next_scheduled( $hook );
 			if ( $timestamp ) {
 				wp_unschedule_event( $timestamp, $hook );
