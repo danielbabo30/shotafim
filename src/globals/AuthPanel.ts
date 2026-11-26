@@ -1,4 +1,5 @@
 import type { GlobalConfig } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 import { previewPath } from "@/lib/admin-preview";
 
 /**
@@ -10,9 +11,7 @@ import { previewPath } from "@/lib/admin-preview";
 export const AuthPanel: GlobalConfig = {
   slug: "auth-panel",
   label: { he: "פאנל הרשמה / כניסה" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "עיצוב האתר" },
     preview: previewPath("/register"),

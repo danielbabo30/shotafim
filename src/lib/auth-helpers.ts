@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import type { UserRole } from "@prisma/client";
 
 /**
@@ -21,4 +22,23 @@ export async function requireRole(role: UserRole) {
     redirect("/dashboard");
   }
   return user;
+}
+
+/**
+ * עבור route handlers / server actions שלא עוברים דרך `requireActiveUser()`:
+ * מחזיר את מזהה המשתמש המחובר רק אם החשבון עדיין תקף ב-DB
+ * (לא נמחק, לא SUSPENDED ולא BANNED). אחרת null. (SEC-A-08)
+ */
+export async function getActiveSessionUserId(): Promise<string | null> {
+  const session = await auth();
+  const id = session?.user?.id;
+  if (!id) return null;
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { status: true, deletedAt: true },
+  });
+  if (!user || user.deletedAt || user.status === "SUSPENDED" || user.status === "BANNED") {
+    return null;
+  }
+  return id;
 }

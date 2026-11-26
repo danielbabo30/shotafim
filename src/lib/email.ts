@@ -16,7 +16,8 @@ export type OutboundEmail = {
 
 export async function sendEmail(msg: OutboundEmail): Promise<{ sent: boolean; id?: string }> {
   if (!hasEmail) {
-    console.info(`[email] skipped (no AUTH_RESEND_KEY): "${msg.subject}" → ${String(msg.to)}`);
+    // בלי כתובות נמען / נושא בלוג — PII (SEC-M-12)
+    console.info("[email] skipped (no AUTH_RESEND_KEY)");
     return { sent: false };
   }
 
@@ -36,13 +37,13 @@ export async function sendEmail(msg: OutboundEmail): Promise<{ sent: boolean; id
       }),
     });
     if (!res.ok) {
-      console.error(`[email] Resend ${res.status}: ${await res.text()}`);
+      console.error(`[email] Resend responded ${res.status}`);
       return { sent: false };
     }
     const data = (await res.json()) as { id?: string };
     return { sent: true, id: data.id };
   } catch (e) {
-    console.error("[email] send failed:", e);
+    console.error("[email] send failed:", e instanceof Error ? e.name : "unknown");
     return { sent: false };
   }
 }

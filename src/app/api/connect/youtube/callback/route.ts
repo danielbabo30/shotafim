@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { cookies } from "next/headers";
 import { requireActiveUser } from "@/lib/app-user";
 import { resolveCreatorId } from "@/lib/actions/settings-actions";
@@ -41,7 +42,7 @@ function errorRedirect(reason: string) {
  * מאמת state מול העוגייה (CSRF), מחליף code בטוקנים, קורא נתוני ערוץ אמיתיים מ-YouTube Data API,
  * ומעדכן/יוצר CreatorChannel (platform=YOUTUBE) עם הטוקן המוצפן ונתוני הערוץ האמיתיים.
  */
-export async function GET(request: NextRequest) {
+async function handleCallback(request: NextRequest) {
   const user = await requireActiveUser();
   if (!user.roleKeys.includes("creator")) {
     return NextResponse.redirect(new URL("/dashboard", site.url));
@@ -163,4 +164,17 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.redirect(new URL(`${SETTINGS_PATH}?youtube=connected`, site.url));
+}
+
+/** עוטף את הטיפול — תקלת רשת מול הספק מחזירה הודעת שגיאה ידידותית (לא 500) ומנקה את עוגיית ה-state */
+export async function GET(request: NextRequest) {
+  try {
+    return await handleCallback(request);
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    console.error("[youtube/callback] unexpected failure", e);
+    const res = errorRedirect("network-error");
+    res.cookies.delete(YOUTUBE_OAUTH_STATE_COOKIE);
+    return res;
+  }
 }

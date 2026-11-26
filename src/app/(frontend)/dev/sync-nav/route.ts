@@ -1,3 +1,4 @@
+import { devRouteBlocked } from "@/lib/dev-guard";
 import { NextResponse } from "next/server";
 import { getPayloadClient } from "@/lib/payload";
 import { DEFAULT_NAV_ITEMS } from "@/lib/cms-defaults";
@@ -7,9 +8,8 @@ import { DEFAULT_NAV_ITEMS } from "@/lib/cms-defaults";
  * נפרד מ-/dev/seed כדי לא לדרוס תוכן עמודים. פיתוח בלבד.
  */
 export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json({ error: "not available" }, { status: 404 });
-  }
+  const blocked = devRouteBlocked();
+  if (blocked) return blocked;
   try {
     const payload = await getPayloadClient();
     await payload.updateGlobal({

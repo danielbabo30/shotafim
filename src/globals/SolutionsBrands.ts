@@ -1,4 +1,5 @@
 import type { GlobalConfig, Field } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 
 /**
  * תוכן עמוד "פתרונות — לעסקים ומפרסמים" (/solutions/brands) — נשלט במלואו מפאנל הניהול.
@@ -19,9 +20,7 @@ const cta = (name: string, label: string, required = false): Field => ({
 export const SolutionsBrands: GlobalConfig = {
   slug: "solutions-brands",
   label: { he: "עמוד — פתרונות לעסקים" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "עיצוב האתר" },
   },

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeJsonLd } from "@/lib/json-ld";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { ArticleHero } from "@/components/marketing/article-hero";
@@ -64,10 +65,7 @@ export default async function ArticlePage({ params }: Params) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
 
       <Container className="py-12">
         <ArticleHero post={post} />

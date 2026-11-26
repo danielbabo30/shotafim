@@ -1,4 +1,5 @@
 import type { GlobalConfig, Field } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 import { previewPath } from "@/lib/admin-preview";
 
 /**
@@ -28,9 +29,7 @@ const bulletList = (name: string, label: string): Field => ({
 export const Homepage: GlobalConfig = {
   slug: "homepage",
   label: { he: "עמוד הבית" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "עיצוב האתר" },
     preview: previewPath("/"),

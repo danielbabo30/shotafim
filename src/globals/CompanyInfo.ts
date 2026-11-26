@@ -1,4 +1,5 @@
 import type { GlobalConfig } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 import { previewPath } from "@/lib/admin-preview";
 
 /**
@@ -19,9 +20,7 @@ export const SOCIAL_PLATFORMS = [
 export const CompanyInfo: GlobalConfig = {
   slug: "company-info",
   label: { he: "מידע על החברה" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "הגדרות אתר" },
     preview: previewPath("/contact"),

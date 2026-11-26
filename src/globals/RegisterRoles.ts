@@ -1,4 +1,5 @@
 import type { GlobalConfig, Field } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 import { previewPath } from "@/lib/admin-preview";
 
 /**
@@ -30,9 +31,7 @@ const roleGroup = (name: string, label: string): Field => ({
 export const RegisterRoles: GlobalConfig = {
   slug: "register-roles",
   label: { he: "הרשמה — בחירת תפקיד" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "עיצוב האתר" },
     preview: previewPath("/register/roles"),

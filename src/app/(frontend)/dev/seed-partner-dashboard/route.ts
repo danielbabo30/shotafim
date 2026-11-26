@@ -1,3 +1,4 @@
+import { devRouteBlocked } from "@/lib/dev-guard";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -24,9 +25,8 @@ const CAMPAIGN_TITLE = "[seed] שותפות תשלום פר רכישה";
 const D = (n: number) => new Prisma.Decimal(n);
 
 export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json({ error: "not available" }, { status: 404 });
-  }
+  const blocked = devRouteBlocked();
+  if (blocked) return blocked;
 
   try {
     const now = new Date();

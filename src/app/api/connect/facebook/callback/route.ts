@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireActiveUser } from "@/lib/app-user";
 import { resolveCreatorId } from "@/lib/actions/settings-actions";
 import { encryptOAuthToken } from "@/lib/oauth-crypto";
@@ -14,7 +15,7 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 type FacebookTokenResponse = {
   access_token?: string;
-  error?: { message?: string };
+  error?: { message?: string; code?: number };
 };
 
 type FacebookPagesResponse = {
@@ -27,14 +28,14 @@ type FacebookPagesResponse = {
     followers_count?: number;
     instagram_business_account?: { id: string };
   }[];
-  error?: { message?: string };
+  error?: { message?: string; code?: number };
 };
 
 type InstagramAccountResponse = {
   id: string;
   username?: string;
   followers_count?: number;
-  error?: { message?: string };
+  error?: { message?: string; code?: number };
 };
 
 function errorRedirect(reason: string) {
@@ -50,7 +51,7 @@ function errorRedirect(reason: string) {
  * (platform=FACEBOOK). אם לעמוד מקושר חשבון אינסטגרם עסקי — שולף גם אותו ומעדכן/יוצר
  * CreatorChannel נוסף (platform=INSTAGRAM).
  */
-export async function GET(request: NextRequest) {
+async function handleCallback(request: NextRequest) {
   const user = await requireActiveUser();
   if (!user.roleKeys.includes("creator")) {
     return NextResponse.redirect(new URL("/dashboard", site.url));
@@ -131,14 +132,10 @@ export async function GET(request: NextRequest) {
   const page = pages.find((p) => p.instagram_business_account?.id) ?? pages[0];
   if (!pagesRes.ok || !page) {
     console.error(
-      `[facebook/callback] no-pages: ok=${pagesRes.ok} count=${pages.length} err=${pagesData.error?.message ?? "none"}`,
+      `[facebook/callback] no-pages: ok=${pagesRes.ok} count=${pages.length} errCode=${pagesData.error?.code ?? "none"}`,
     );
     return errorRedirect("no-pages");
   }
-
-  console.info(
-    `[facebook/callback] page="${page.name}" fan=${page.fan_count} followers=${page.followers_count} ig=${page.instagram_business_account?.id ?? "none"} (pages total=${pages.length})`,
-  );
 
   const pageAccessTokenEnc = encryptOAuthToken(page.access_token);
   const now = new Date();
@@ -174,11 +171,6 @@ export async function GET(request: NextRequest) {
 
   // שלב 4: אם לעמוד מקושר חשבון אינסטגרם עסקי — שולפים גם אותו ושומרים כערוץ נפרד
   const igAccountId = page.instagram_business_account?.id;
-  if (!igAccountId) {
-    console.info(
-      `[facebook/callback] no linked Instagram business account on page "${page.name}" — Facebook connected, Instagram skipped`,
-    );
-  }
   if (igAccountId) {
     const igUrl = new URL(`${GRAPH_BASE}/${igAccountId}`);
     igUrl.searchParams.set("fields", "username,followers_count");
@@ -187,7 +179,7 @@ export async function GET(request: NextRequest) {
     const igData = (await igRes.json()) as InstagramAccountResponse;
     if (!igRes.ok || !igData.username) {
       console.error(
-        `[facebook/callback] instagram fetch failed: ok=${igRes.ok} err=${igData.error?.message ?? "none"}`,
+        `[facebook/callback] instagram fetch failed: ok=${igRes.ok} errCode=${igData.error?.code ?? "none"}`,
       );
     }
 
@@ -225,4 +217,17 @@ export async function GET(request: NextRequest) {
   const res = NextResponse.redirect(new URL(`${SETTINGS_PATH}?facebook=connected`, site.url));
   res.cookies.delete(FACEBOOK_OAUTH_STATE_COOKIE);
   return res;
+}
+
+/** עוטף את הטיפול — תקלת רשת מול הספק מחזירה הודעת שגיאה ידידותית (לא 500) ומנקה את עוגיית ה-state */
+export async function GET(request: NextRequest) {
+  try {
+    return await handleCallback(request);
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    console.error("[facebook/callback] unexpected failure", e);
+    const res = errorRedirect("network-error");
+    res.cookies.delete(FACEBOOK_OAUTH_STATE_COOKIE);
+    return res;
+  }
 }

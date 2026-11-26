@@ -1,3 +1,5 @@
+import { devRouteBlocked } from "@/lib/dev-guard";
+import { safeRelativePath } from "@/lib/safe-redirect";
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -28,15 +30,14 @@ const ROLE_MAP: Record<string, "BRAND" | "CREATOR" | "AD_SPACE_OWNER" | "ADMIN">
 };
 
 export async function GET(request: NextRequest) {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json({ error: "not available" }, { status: 404 });
-  }
+  const blocked = devRouteBlocked();
+  if (blocked) return blocked;
 
   const params = request.nextUrl.searchParams;
   const pending = params.get("pending") === "1";
   const asEmail = params.get("email")?.trim().toLowerCase() || null;
   const activeRole = ROLE_MAP[params.get("role") ?? "brand"] ?? "BRAND";
-  const next = params.get("next") ?? (pending ? "/register/roles" : "/dashboard");
+  const next = safeRelativePath(params.get("next"), pending ? "/register/roles" : "/dashboard");
 
   try {
     const now = new Date();

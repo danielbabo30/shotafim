@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { publicContentAccess } from "@/lib/payload-access";
 import { GUIDE_CATEGORIES, GUIDE_AUDIENCES } from "@/lib/guide-categories";
 import { previewBySlug } from "@/lib/admin-preview";
 import { PROSE_BLOCKS } from "@/collections/content-blocks";
@@ -14,9 +15,7 @@ export const Guides: CollectionConfig = {
     singular: { he: "מדריך" },
     plural: { he: "מדריכים" },
   },
-  access: {
-    read: () => true,
-  },
+  access: publicContentAccess,
   admin: {
     useAsTitle: "title",
     defaultColumns: ["title", "category", "audience", "popular"],

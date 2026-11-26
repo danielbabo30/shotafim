@@ -1,6 +1,7 @@
-import { auth } from "@/auth";
+import { getActiveSessionUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { storage } from "@/lib/storage";
+import { isSafeInlineMime } from "@/lib/deliverable-upload";
 
 /**
  * הגשה מאובטחת של קבצי תוצרים שהועלו לחדר העבודה.
@@ -13,8 +14,9 @@ export async function GET(
 ) {
   const { attachmentId } = await params;
 
-  const session = await auth();
-  if (!session?.user?.id) {
+  // כולל בדיקת סטטוס (מושעה/חסום/נמחק) מול ה-DB — SEC-A-08
+  const uid = await getActiveSessionUserId();
+  if (!uid) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -38,7 +40,6 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const uid = session.user.id;
   if (contract.providerId !== uid && contract.business.userId !== uid) {
     return new Response("Forbidden", { status: 403 });
   }
@@ -50,10 +51,16 @@ export async function GET(
 
   const filename = encodeURIComponent(attachment.originalFilename ?? attachmentId);
 
+  const mime = attachment.mimeType || object.contentType;
+  // סוג שאינו ברשימה הבטוחה (למשל SVG ישן שכבר הועלה) מוגש להורדה בלבד, לא inline.
+  const disposition = isSafeInlineMime(mime) ? "inline" : "attachment";
+
   return new Response(object.body, {
     headers: {
-      "Content-Type": attachment.mimeType || object.contentType,
-      "Content-Disposition": `inline; filename*=UTF-8''${filename}`,
+      "Content-Type": isSafeInlineMime(mime) ? mime : "application/octet-stream",
+      "Content-Disposition": `${disposition}; filename*=UTF-8''${filename}`,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
       "Cache-Control": "private, max-age=3600",
       ...(object.size ? { "Content-Length": String(object.size) } : {}),
     },

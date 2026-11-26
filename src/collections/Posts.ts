@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { publicContentAccess } from "@/lib/payload-access";
 import { POST_CATEGORIES } from "@/lib/post-categories";
 import { previewBySlug } from "@/lib/admin-preview";
 
@@ -13,9 +14,7 @@ export const Posts: CollectionConfig = {
     singular: { he: "מאמר" },
     plural: { he: "מאמרים" },
   },
-  access: {
-    read: () => true,
-  },
+  access: publicContentAccess,
   admin: {
     useAsTitle: "title",
     defaultColumns: ["title", "category", "publishedAt", "featured"],

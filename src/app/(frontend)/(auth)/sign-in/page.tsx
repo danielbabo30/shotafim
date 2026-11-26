@@ -5,6 +5,8 @@ import { AuthError } from "next-auth";
 import { auth, signIn } from "@/auth";
 import { hasEmail, hasGoogle } from "@/env";
 import { site } from "@/lib/site";
+import { safeRelativePath } from "@/lib/safe-redirect";
+import { isRateLimited } from "@/lib/rate-limit";
 
 export const metadata: Metadata = { title: "כניסה" };
 
@@ -13,10 +15,12 @@ type SearchParams = Promise<{ callbackUrl?: string; check?: string; error?: stri
 export default async function SignInPage({ searchParams }: { searchParams: SearchParams }) {
   const { callbackUrl, check, error } = await searchParams;
 
-  const session = await auth();
-  if (session?.user) redirect(callbackUrl || "/dashboard");
+  // רק נתיב יחסי באתר — מונע open redirect (SEC-A-02)
+  const redirectTo = safeRelativePath(callbackUrl, "/dashboard");
 
-  const redirectTo = callbackUrl || "/dashboard";
+  const session = await auth();
+  if (session?.user) redirect(redirectTo);
+
   const noProviders = !hasGoogle && !hasEmail;
 
   return (
@@ -66,9 +70,19 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
         <form
           action={async (formData: FormData) => {
             "use server";
+            const email = String(formData.get("email") ?? "")
+              .trim()
+              .toLowerCase();
+            // SEC-A-03: הגבלת קישורי כניסה — לפי IP ולפי כתובת היעד
+            if (
+              (await isRateLimited("signin:ip", 10, 3600)) ||
+              (await isRateLimited("signin:email", 5, 3600, email))
+            ) {
+              redirect("/sign-in?error=rate");
+            }
             try {
               await signIn("resend", {
-                email: String(formData.get("email")),
+                email,
                 redirectTo,
               });
             } catch (err) {

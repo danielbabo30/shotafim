@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { publicContentAccess } from "@/lib/payload-access";
 import { CATEGORY_SCOPES } from "@/lib/partner-categories";
 
 /**
@@ -15,9 +16,7 @@ export const Categories: CollectionConfig = {
     singular: { he: "קטגוריה" },
     plural: { he: "קטגוריות" },
   },
-  access: {
-    read: () => true,
-  },
+  access: publicContentAccess,
   admin: {
     useAsTitle: "name",
     defaultColumns: ["name", "slug", "scopes", "isActive", "sortOrder"],

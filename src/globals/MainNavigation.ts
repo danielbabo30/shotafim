@@ -1,4 +1,5 @@
 import type { GlobalConfig } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 import { previewPath } from "@/lib/admin-preview";
 
 /**
@@ -9,9 +10,7 @@ import { previewPath } from "@/lib/admin-preview";
 export const MainNavigation: GlobalConfig = {
   slug: "main-navigation",
   label: { he: "תפריט ניווט ראשי" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "הגדרות אתר" },
     preview: previewPath("/"),

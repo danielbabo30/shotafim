@@ -1,3 +1,4 @@
+import { devRouteBlocked } from "@/lib/dev-guard";
 import { NextResponse } from "next/server";
 import {
   Prisma,
@@ -229,9 +230,8 @@ async function cityIdByName(nameHe: string | null): Promise<string | null> {
 }
 
 export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json({ error: "not available" }, { status: 404 });
-  }
+  const blocked = devRouteBlocked();
+  if (blocked) return blocked;
 
   try {
     const now = new Date();

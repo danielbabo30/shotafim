@@ -35,9 +35,7 @@ export async function GET() {
     select: { id: true },
   });
   if (!consent) {
-    return NextResponse.redirect(
-      new URL("/dashboard/settings?youtube=consent-required", site.url),
-    );
+    return NextResponse.redirect(new URL("/dashboard/settings?youtube=consent-required", site.url));
   }
 
   const state = randomBytes(32).toString("hex");

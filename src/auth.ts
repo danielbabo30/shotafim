@@ -13,6 +13,8 @@ if (hasGoogle) {
     Google({
       clientId: env.AUTH_GOOGLE_ID!,
       clientSecret: env.AUTH_GOOGLE_SECRET!,
+      // קישור אוטומטי לחשבון קיים לפי מייל — מותר רק כש-Google מאשר את המייל
+      // (callbacks.signIn למטה דוחה email_verified !== true). ראה SEC-A-01.
       allowDangerousEmailAccountLinking: true,
     }),
   );
@@ -30,7 +32,9 @@ if (hasEmail) {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "database" },
-  trustHost: true,
+  // סומכים על כותרת Host רק כש-AUTH_URL מקובע (או הוגדר AUTH_TRUST_HOST במפורש / רץ על Vercel).
+  // ב-production env.ts דורש AUTH_URL. ראה SEC-M-11.
+  trustHost: Boolean(env.AUTH_URL) || env.AUTH_TRUST_HOST || Boolean(process.env.VERCEL),
   pages: {
     signIn: "/sign-in",
     verifyRequest: "/sign-in?check=email",
@@ -38,6 +42,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   providers,
   callbacks: {
+    /**
+     * SEC-A-01: כניסה עם Google רק למייל מאומת אצל Google — אחרת תוקף עם חשבון
+     * Google לא-מאומת על מייל הקורבן היה משתלט על חשבון קיים (pre-hijacking).
+     */
+    signIn({ account, profile }) {
+      if (account?.provider === "google") {
+        return profile?.email_verified === true;
+      }
+      return true;
+    },
     /** מוסיף id ותפקיד לאובייקט ה-session שנחשף ללקוח ולשרת */
     session({ session, user }) {
       if (session.user) {

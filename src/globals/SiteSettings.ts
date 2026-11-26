@@ -1,4 +1,5 @@
 import type { GlobalConfig } from "payload";
+import { publicGlobalAccess } from "@/lib/payload-access";
 import { previewPath } from "@/lib/admin-preview";
 
 /**
@@ -8,9 +9,7 @@ import { previewPath } from "@/lib/admin-preview";
 export const SiteSettings: GlobalConfig = {
   slug: "site-settings",
   label: { he: "הגדרות אתר" },
-  access: {
-    read: () => true,
-  },
+  access: publicGlobalAccess,
   admin: {
     group: { he: "הגדרות אתר" },
     preview: previewPath("/"),
@@ -141,7 +140,7 @@ export const SiteSettings: GlobalConfig = {
                   name: "enabled",
                   label: { he: "הצג טופס ניוזלטר" },
                   type: "checkbox",
-                  defaultValue: true,
+                  defaultValue: false,
                 },
                 {
                   name: "heading",
