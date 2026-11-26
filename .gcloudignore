@@ -1,0 +1,18 @@
+# gcloud run deploy --source משתמש ב-.gcloudignore (אחרת ב-.gitignore) — זהה ל-.dockerignore
+.git
+.gitignore
+.next
+node_modules
+.storage
+media
+certificates
+docs
+deploy
+.claude
+.env
+.env.*
+!.env.example
+*.pem
+npm-debug.log*
+tsconfig.tsbuildinfo
+.DS_Store

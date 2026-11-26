@@ -16,7 +16,7 @@
 
 ## דרישות מקדימות — חשוב
 
-- **Node.js 20.18.3 בדיוק** (`nvm install 20.18.3 && nvm alias default 20.18.3`).
+- **Node.js 22.23.5 ומעלה** (`nvm install 22.23.5 && nvm alias default 22.23.5`; ראה `.nvmrc`).
   לא גרסה חדשה יותר: ה-CLI של Payload נשבר על Node ≥ 20.19.
 - **npm** (לא pnpm — pnpm 11 דורש Node ≥ 22.13 שמתנגש עם Payload).
 - חשבון Neon (מסלול חינם).

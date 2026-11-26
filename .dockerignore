@@ -1,0 +1,18 @@
+# לא נכנס להקשר הבילד של Docker / gcloud run deploy --source
+.git
+.gitignore
+.next
+node_modules
+.storage
+media
+certificates
+docs
+deploy
+.claude
+.env
+.env.*
+!.env.example
+*.pem
+npm-debug.log*
+tsconfig.tsbuildinfo
+.DS_Store

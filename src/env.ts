@@ -51,9 +51,47 @@ const schema = z.object({
   // (Meta dashboard → Facebook Login for Business → Configurations). בלעדיו מסך ההסכמה
   // מבקש רק שם+תמונה. עם config_id — מבקש את ההרשאות והנכסים שהוגדרו ב-configuration.
   FACEBOOK_LOGIN_CONFIG_ID: z.string().optional(),
+
+  // אחסון קבצים. local (ברירת מחדל, dev בלבד) | gcs (Cloud Storage) | blob (לא ממומש).
+  STORAGE_DRIVER: z.enum(["local", "gcs", "blob"]).default("local"),
+  // שם ה-bucket הפרטי ב-Cloud Storage — חובה כש-STORAGE_DRIVER=gcs.
+  GCS_BUCKET: z.string().optional(),
 });
 
-const parsed = schema.safeParse(process.env);
+const parsed = schema
+  .superRefine((v, ctx) => {
+    if (v.STORAGE_DRIVER === "gcs" && !v.GCS_BUCKET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["GCS_BUCKET"],
+        message: "STORAGE_DRIVER=gcs דורש GCS_BUCKET (שם ה-bucket הפרטי)",
+      });
+    }
+    // הקשחות ייצור (SEC-M-11 / SEC-A-17): כשל בהפעלה במקום ברירת מחדל חלשה
+    if (v.NODE_ENV !== "production") return;
+    if (v.PAYLOAD_SECRET.length < 16) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PAYLOAD_SECRET"],
+        message: "בפרודקשן PAYLOAD_SECRET חייב להיות באורך 16 תווים לפחות",
+      });
+    }
+    if (v.AUTH_SECRET.length < 16) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["AUTH_SECRET"],
+        message: "בפרודקשן AUTH_SECRET חייב להיות באורך 16 תווים לפחות",
+      });
+    }
+    if (!v.AUTH_URL) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["AUTH_URL"],
+        message: "בפרודקשן חובה להגדיר AUTH_URL (מונע Host header injection בקישורי כניסה)",
+      });
+    }
+  })
+  .safeParse(process.env);
 
 if (!parsed.success) {
   const issues = parsed.error.issues.map((i) => `  • ${i.path.join(".")}: ${i.message}`).join("\n");

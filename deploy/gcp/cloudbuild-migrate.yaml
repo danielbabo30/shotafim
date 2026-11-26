@@ -1,0 +1,11 @@
+# בונה את תמונת ה-migrate (prisma migrate deploy) ל-Artifact Registry.
+# לא להריץ אוטומטית. שימוש (ראה docs/deploy/gcp-cloud-run.md):
+#   gcloud builds submit --config deploy/gcp/cloudbuild-migrate.yaml \
+#     --substitutions=_IMAGE=me-west1-docker.pkg.dev/PROJECT_ID/shutafim/migrate:latest .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "--target", "migrate", "-t", "${_IMAGE}", "."]
+images:
+  - "${_IMAGE}"
+substitutions:
+  _IMAGE: "me-west1-docker.pkg.dev/PROJECT_ID/shutafim/migrate:latest"
