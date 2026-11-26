@@ -18,10 +18,11 @@ const siteUrlSchema = z
   .string()
   .trim()
   .min(1, "יש להזין את כתובת החנות")
-  .transform((v) => v.replace(/\/+$/, ""))
+  // סכמה + hostname באותיות קטנות (נתיב נשמר כפי שהוא)
+  .transform((v) => v.replace(/\/+$/, "").replace(/^https?:\/\/[^/]+/i, (m) => m.toLowerCase()))
   .refine(
-    (v) => /^https?:\/\/[^\s/]+\.[^\s/]+/.test(v),
-    "כתובת חנות לא תקינה — לדוגמה https://mystore.co.il",
+    (v) => /^https:\/\/[^\s/]+\.[^\s/]+/.test(v),
+    "כתובת חנות לא תקינה — נדרש https, לדוגמה https://mystore.co.il",
   );
 
 async function brandBusiness() {
@@ -72,7 +73,7 @@ export async function connectStore(
     select: { id: true },
   });
 
-  revalidatePath("/dashboard/plugin");
+  revalidatePath("/dashboard/settings");
   return { status: "key", siteUrl, token: pairingToken(site.id, apiKey) };
 }
 
@@ -105,7 +106,7 @@ export async function rotateStoreKey(
     data: { apiKeyHash: sha256Hex(apiKey), apiKeyEnc, status: "ACTIVE" },
   });
 
-  revalidatePath("/dashboard/plugin");
+  revalidatePath("/dashboard/settings");
   return { status: "key", siteUrl: site.siteUrl, token: pairingToken(site.id, apiKey) };
 }
 
@@ -120,5 +121,5 @@ export async function disconnectStore(formData: FormData): Promise<void> {
     data: { status: "DEACTIVATED" },
   });
 
-  revalidatePath("/dashboard/plugin");
+  revalidatePath("/dashboard/settings");
 }

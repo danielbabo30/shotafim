@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { PLUGIN_TERMS_VERSION } from "@/lib/plugin-terms";
 
 /**
  * הורדת תוסף המעקב של WooCommerce — למשתמש מסוג מפרסם (BRAND) בלבד.
@@ -34,6 +35,16 @@ export async function GET() {
     return new Response("Forbidden", { status: 403 });
   }
 
+  // אכיפה בשרת: חייב להיות אישור תקנון לגרסה הנוכחית (נרשם ב-acceptPluginTerms).
+  const consent = await prisma.pluginDownloadConsent.findFirst({
+    where: { userId: session.user.id, termsVersion: PLUGIN_TERMS_VERSION },
+    orderBy: { acceptedAt: "desc" },
+    select: { id: true },
+  });
+  if (!consent) {
+    return new Response("Terms not accepted", { status: 403 });
+  }
+
   let zip: Buffer;
   try {
     zip = await readFile(ZIP);
@@ -48,6 +59,11 @@ export async function GET() {
     // version.txt אופציונלי — נשתמש בשם בסיס
   }
   const filename = version ? `bridgead-woo-plugin-${version}.zip` : "bridgead-woo-plugin.zip";
+
+  await prisma.pluginDownloadConsent.update({
+    where: { id: consent.id },
+    data: { downloadedAt: new Date() },
+  });
 
   return new Response(new Uint8Array(zip), {
     headers: {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/marketing/site-header";
+import { CookieConsent } from "@/components/consent/cookie-consent";
 import { SiteFooter } from "@/components/marketing/site-footer";
 
 // ISR — שינויים ב-CMS מופיעים תוך דקה בלי דיפלוי מחדש.
@@ -12,6 +13,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <CookieConsent />
     </>
   );
 }

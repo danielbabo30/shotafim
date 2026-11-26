@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { publicContentAccess } from "@/lib/payload-access";
 import { PROSE_BLOCKS } from "@/collections/content-blocks";
 import { LEGAL_PAGES } from "@/lib/legal-pages";
 
@@ -16,9 +17,7 @@ export const LegalPages: CollectionConfig = {
     singular: { he: "מסמך משפטי" },
     plural: { he: "מסמכים משפטיים" },
   },
-  access: {
-    read: () => true,
-  },
+  access: publicContentAccess,
   admin: {
     useAsTitle: "title",
     defaultColumns: ["title", "slug", "updatedAt"],

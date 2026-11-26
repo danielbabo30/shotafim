@@ -424,26 +424,27 @@ model User {
   creatorProfile      CreatorProfile?
   adSpaceOwnerProfile AdSpaceOwnerProfile?
 
-  campaignApplications CampaignApplication[]     @relation("ApplicationApplicant")
-  sentCampaignInvites  CampaignApplication[]     @relation("ApplicationInviter")
-  providerContracts    Contract[]                @relation("ContractProvider")
-  transactions         Transaction[]
-  invoices             Invoice[]
-  sentMessages         Message[]
-  conversations        ConversationParticipant[]
-  notifications        Notification[]
-  deliverableFeedback  ContentFeedback[]
-  authoredReviews      Review[]                  @relation("ReviewAuthor")
-  receivedReviews      Review[]                  @relation("ReviewTarget")
-  reviewPrompts        ReviewPrompt[]
-  auditLogs            AuditLog[]
-  legalConsents        LegalConsent[]
-  uploadedMedia        MediaAttachment[]
-  openedDisputes       Dispute[]                 @relation("DisputeInitiator")
-  arbitratedDisputes   Dispute[]                 @relation("DisputeArbitrator")
-  disputeMessages      DisputeMessage[]
-  reportsMade          UserBlockReport[]         @relation("BlockReporter")
-  reportsReceived      UserBlockReport[]         @relation("BlockReported")
+  campaignApplications   CampaignApplication[]     @relation("ApplicationApplicant")
+  sentCampaignInvites    CampaignApplication[]     @relation("ApplicationInviter")
+  providerContracts      Contract[]                @relation("ContractProvider")
+  transactions           Transaction[]
+  invoices               Invoice[]
+  sentMessages           Message[]
+  conversations          ConversationParticipant[]
+  notifications          Notification[]
+  deliverableFeedback    ContentFeedback[]
+  authoredReviews        Review[]                  @relation("ReviewAuthor")
+  receivedReviews        Review[]                  @relation("ReviewTarget")
+  reviewPrompts          ReviewPrompt[]
+  auditLogs              AuditLog[]
+  legalConsents          LegalConsent[]
+  pluginDownloadConsents PluginDownloadConsent[]
+  uploadedMedia          MediaAttachment[]
+  openedDisputes         Dispute[]                 @relation("DisputeInitiator")
+  arbitratedDisputes     Dispute[]                 @relation("DisputeArbitrator")
+  disputeMessages        DisputeMessage[]
+  reportsMade            UserBlockReport[]         @relation("BlockReporter")
+  reportsReceived        UserBlockReport[]         @relation("BlockReported")
 
   enforcementActionsReceived EnforcementAction[] @relation("EnforcementTarget")
   enforcementActionsIssued   EnforcementAction[] @relation("EnforcementIssuer")
@@ -499,28 +500,29 @@ model VerificationToken {
 // ═══════════════════════════════════════════════════════════════
 
 model BusinessProfile {
-  id                 String             @id @default(cuid())
-  userId             String             @unique
-  name               String
-  legalName          String?
-  companyId          String             @unique // ח.פ / עוסק מורשה
-  entityType         LegalEntityType
-  description        String
-  businessModel      BusinessModel
-  status             ProfileStatus      @default(ACTIVE)
-  verificationStatus VerificationStatus @default(PENDING)
-  logoUrl            String?
-  websiteUrl         String?
-  socialLinks        Json? // { instagram, tiktok, facebook }
-  contactName        String
-  contactPhone       String
-  billingEmail       String
-  billingAddress     String
-  billingCustomerId  String? // מזהה לקוח בספק הסליקה
-  partnershipDebtILS Decimal            @default(0) @db.Decimal(12, 2) // חוב חריגת פיקדון פתוח (§6) — > 0 חוסם פתיחת קמפיינים חדשים
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  deletedAt          DateTime?
+  id                     String                  @id @default(cuid())
+  pluginDownloadConsents PluginDownloadConsent[]
+  userId                 String                  @unique
+  name                   String
+  legalName              String?
+  companyId              String                  @unique // ח.פ / עוסק מורשה
+  entityType             LegalEntityType
+  description            String
+  businessModel          BusinessModel
+  status                 ProfileStatus           @default(ACTIVE)
+  verificationStatus     VerificationStatus      @default(PENDING)
+  logoUrl                String?
+  websiteUrl             String?
+  socialLinks            Json? // { instagram, tiktok, facebook }
+  contactName            String
+  contactPhone           String
+  billingEmail           String
+  billingAddress         String
+  billingCustomerId      String? // מזהה לקוח בספק הסליקה
+  partnershipDebtILS     Decimal                 @default(0) @db.Decimal(12, 2) // חוב חריגת פיקדון פתוח (§6) — > 0 חוסם פתיחת קמפיינים חדשים
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  deletedAt              DateTime?
 
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   locations    BusinessLocation[]
@@ -623,10 +625,10 @@ model CreatorChannel {
   updatedAt         DateTime       @updatedAt
 
   // חיבור OAuth אמיתי לפלטפורמה (יוטיוב וכו') — WP-5
-  externalAccountId   String? // מזהה החשבון בפלטפורמה עצמה (למשל YouTube channel ID), ל-re-sync
+  externalAccountId    String? // מזהה החשבון בפלטפורמה עצמה (למשל YouTube channel ID), ל-re-sync
   oauthRefreshTokenEnc String? // טוקן רענון מוצפן (AES-256-GCM — src/lib/oauth-crypto.ts)
-  oauthScope          String? // ה-scope שאושר בזמן ההרשאה
-  oauthTokenUpdatedAt DateTime?
+  oauthScope           String? // ה-scope שאושר בזמן ההרשאה
+  oauthTokenUpdatedAt  DateTime?
 
   creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
@@ -1225,6 +1227,27 @@ model LegalConsent {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// אישור תקנון הורדת תוסף המעקב — ראיה משפטית לפני כל הורדה (מתמלא לפני ההורדה; downloadedAt בהורדה בפועל).
+model PluginDownloadConsent {
+  id            String    @id @default(cuid())
+  userId        String
+  businessId    String?
+  userName      String? // snapshot בזמן האישור
+  userEmail     String? // snapshot בזמן האישור
+  acceptedAt    DateTime  @default(now())
+  termsVersion  String
+  pluginVersion String?
+  ipAddress     String? // x-forwarded-for (הכתובת הראשונה) — ניתנת לזיוף, ערך תיעודי בלבד
+  userAgent     String?
+  downloadedAt  DateTime?
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business BusinessProfile? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([userId, termsVersion])
+  @@index([acceptedAt])
 }
 
 /// ניהול קבצים מאובטח במערכת.

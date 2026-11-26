@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Logo } from "@/components/marketing/logo";
 import { NewsletterForm } from "@/components/marketing/newsletter-form";
+import { CookieSettingsLink } from "@/components/consent/cookie-settings-link";
 import { getShellData } from "@/lib/cms";
 
 export async function SiteFooter() {
@@ -57,6 +58,7 @@ export async function SiteFooter() {
                 {link.label}
               </Link>
             ))}
+            <CookieSettingsLink className="text-on-surface-variant hover:text-primary text-xs transition-colors" />
           </div>
         </div>
       </Container>
