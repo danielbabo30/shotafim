@@ -72,6 +72,8 @@ type Props = {
   couponDiscountPct: number | null;
   hasLink: boolean;
   active: boolean;
+  /** כבוי ב-POC: ההפעלה נעשית ע"י צוות BridgeAd ולא דרך הפקדה */
+  paymentsEnabled?: boolean;
 };
 
 /** מחולל לינקים ליוצר — deep-link לכל עמוד מוצר + QR ל-offline (סטוריז, פודקאסט, פרינט). */
@@ -82,6 +84,7 @@ export function PartnerLinkGenerator({
   couponDiscountPct,
   hasLink,
   active,
+  paymentsEnabled = true,
 }: Props) {
   const [raw, setRaw] = useState(destinationUrl);
   const { url, valid } = withRef(raw, refCode);
@@ -95,7 +98,7 @@ export function PartnerLinkGenerator({
         </h3>
         {!active && (
           <span className="bg-surface-container text-on-surface-variant ms-auto rounded-full px-2 py-0.5 text-[11px] font-medium">
-            יופעל אחרי הפקדת הפיקדון
+            {paymentsEnabled ? "יופעל אחרי הפקדת הפיקדון" : "יופעל על ידי צוות BridgeAd"}
           </span>
         )}
       </div>

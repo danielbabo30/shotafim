@@ -7,6 +7,7 @@ import { getCampaignDetail } from "@/lib/applications";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { APPLICATION_STATUS_META } from "@/lib/pitch";
 import { CampaignBriefView } from "@/components/app/pitch/campaign-brief-view";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { ApplicationReviewItem } from "@/components/app/pitch/application-review-item";
 import { ApplyForm, type OfferOption } from "@/components/app/pitch/apply-form";
 import { StatusChip } from "@/components/app/status-chip";
@@ -87,7 +88,7 @@ export default async function CampaignDetailPage({
 
       <ActionErrorBanner code={err} />
 
-      <CampaignBriefView brief={brief} />
+      <CampaignBriefView brief={brief} paymentsEnabled={arePaymentsEnabled()} />
 
       {isOwner && (brief.status === "DRAFT" || brief.status === "OPEN_FOR_PITCHES") && (
         <div className="border-outline-variant bg-surface-lowest flex flex-wrap items-center gap-2 rounded-xl border p-4">

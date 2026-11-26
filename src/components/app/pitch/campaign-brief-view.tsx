@@ -16,7 +16,13 @@ const dateFmt = new Intl.DateTimeFormat("he-IL", {
 });
 
 /** תצוגת הבריף — משותפת לתצוגת המפרסם ולתצוגת הספק */
-export function CampaignBriefView({ brief }: { brief: CampaignBrief }) {
+export function CampaignBriefView({
+  brief,
+  paymentsEnabled = true,
+}: {
+  brief: CampaignBrief;
+  paymentsEnabled?: boolean;
+}) {
   return (
     <div className="border-outline-variant bg-surface-lowest shadow-ambient flex flex-col gap-5 rounded-xl border p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -127,8 +133,9 @@ export function CampaignBriefView({ brief }: { brief: CampaignBrief }) {
             </div>
           </dl>
           <p className="text-on-surface-variant text-xs">
-            דורש חנות WooCommerce עם תוסף המעקב של BridgeAd. התשלום מנוקז מפיקדון המפרסם לפי מכירות
-            בפועל, ומשולם בתחנות.
+            {paymentsEnabled
+              ? "דורש חנות WooCommerce עם תוסף המעקב של BridgeAd. התשלום מנוקז מפיקדון המפרסם לפי מכירות בפועל, ומשולם בתחנות."
+              : "דורש חנות WooCommerce עם תוסף המעקב של BridgeAd. העמלה מחושבת לפי מכירות בפועל; התשלום בשלב ה-POC מתבצע מחוץ למערכת."}
           </p>
         </div>
       )}

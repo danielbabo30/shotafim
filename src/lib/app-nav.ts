@@ -120,6 +120,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
     nav: [
       DASHBOARD,
       { href: "/dashboard/disputes", label: "מחלוקות", icon: "gavel" },
+      { href: "/dashboard/admin/partner-programs", label: "תוכניות שותפות", icon: "contract" },
       { href: "/dashboard/reports", label: "דוחות מערכת", icon: "chart", payments: true },
     ],
   },

@@ -28,3 +28,12 @@
 - חוזה רגיל נשאר `AWAITING_ESCROW` ללא הפקדה → לא נהפך ל-`ACTIVE`, ו-`approveAndRelease` חסום: זרימת תוצרים לא תתקדם. ב-POC יש להשתמש בשותפות פר-רכישה.
 - שותפות נשארת `PENDING_DEPOSIT` (הלינק/קופון "עולים לאוויר" רק ב-`ACTIVE`) — יש לוודא מול הגדרת POC (seed/אדמין) או להחליט על מעבר ידני.
 - טפסי הגדרות עדיין אוספים פרטי בנק ("פרטי תשלום"); לא הוסתרו.
+
+## הפעלת תוכנית שותפות ב-POC בלי פיקדון — `activatePartnerProgramForPoc`
+קוד: `src/lib/actions/partner-actions.ts`; מסך: `/dashboard/admin/partner-programs` (אדמין; קישור "תוכניות שותפות" בניווט ניהול); טופס: `src/components/app/activate-poc-form.tsx`.
+
+**מה עושה:** `PartnerProgram` PENDING_DEPOSIT -> ACTIVE, ו-`Contract` AWAITING_ESCROW -> ACTIVE (כמו `fundPartnerDeposit`, בלי כסף). הלינק והקופון "עולים לאוויר" (`recordClick`/`ingestOrder` דורשים ACTIVE/GATE_80).
+**תנאים:** `requireAdmin()`; פועלת רק כש-`PAYMENTS_UI_ENABLED=false` (אחרת "פעולה זו אינה זמינה בשלב זה", והמסך מציג "הפעולה אינה זמינה בשלב זה" בלי כפתורים); idempotent (תוכנית שכבר ACTIVE מחזירה "כבר פעילה", סטטוס אחר -> שגיאה); כותבת `AuditLog` (`action="partnerProgram.activatedForPoc"`, `metadata.before/after/noDeposit`) באותה טרנזקציה.
+**לא עושה:** לא יוצרת `EscrowHold`/`Transaction`/`Invoice`, לא קובעת `depositHoldId`, לא נוגעת בחישוב עמלה/אישור/תחנות.
+**מה קורה בלי פיקדון (נבדק):** `applyDeposiDrain` מחשב אחוז 0 כש-`depositILS=0`, לכן שער 80%/השהיה ב-100% לא מופעלים; `drainedILS` עדיין מצטבר (אישור עמלה `20+2` -> `22`). `reconcile` מדלג על תוכניות בלי `depositHoldId` (גם לא סוגר אותן). `checkpoints` cron עדיין עלול ליצור "תשלום" פיקטיבי — להשאיר כבוי.
+**שים לב:** קליטת הזמנה (`ingestOrder`) יוצרת `Transaction` מסוג `COMMISSION_ACCRUAL` (ביטול: `COMMISSION_REVERSAL`) — רישום חשבונאי של עמלה, לא תנועת כסף; זו הלוגיקה הקיימת ולא שונתה.

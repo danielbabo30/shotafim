@@ -811,8 +811,9 @@ export function CampaignWizard({
               <ShieldCheckIcon className="text-primary mt-0.5 size-6 shrink-0" />
               <div className="text-sm leading-relaxed">
                 <p className="text-on-surface font-medium">
-                  לאחר שתאשרו הצעת יוצר, המערכת תחשב את הפיקדון הנדרש מתנאי השותפות ותנפיק
-                  לינק/קופון ייחודי. הלינק יעלה לאוויר רק לאחר הפקדת הפיקדון.
+                  {paymentsEnabled
+                    ? "לאחר שתאשרו הצעת יוצר, המערכת תחשב את הפיקדון הנדרש מתנאי השותפות ותנפיק לינק/קופון ייחודי. הלינק יעלה לאוויר רק לאחר הפקדת הפיקדון."
+                    : "לאחר שתאשרו הצעת יוצר, המערכת תנפיק לינק/קופון ייחודי. הלינק יעלה לאוויר לאחר שצוות BridgeAd יפעיל את התוכנית."}
                 </p>
                 <p className="text-on-surface-variant mt-2">
                   בשלב זה אין חיוב. שמירה כטיוטה שומרת את הבריף; פרסום פותח אותו להצעות.

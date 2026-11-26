@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/app-user";
+import { requireAdmin } from "@/lib/admin-guard";
 import { arePaymentsEnabled, paymentsBlockedState } from "@/lib/payments-gate";
 import type { ContractActionState } from "@/lib/contract-room";
 import { FINAL_CHECKPOINT_GRACE_DAYS } from "@/lib/partner-terms";
@@ -92,6 +93,69 @@ export async function fundPartnerDeposit(
 
   revalidateContract(contract.id);
   return { status: "success", message: "הפיקדון הופקד — הלינק והקופון פעילים." };
+}
+
+/**
+ * POC בלבד — הפעלת תוכנית שותפות בלי פיקדון (אדמין).
+ * זמין רק כש-PAYMENTS_UI_ENABLED=false. מעביר PENDING_DEPOSIT → ACTIVE (והחוזה AWAITING_ESCROW → ACTIVE)
+ * בלי EscrowHold / Transaction / Invoice ובלי depositHoldId. כותב AuditLog. idempotent.
+ * ללא פיקדון: ניקוז/שערי 80%/100% אינם מופעלים (drain.ts מחשב אחוז 0 כש-depositILS=0).
+ */
+export async function activatePartnerProgramForPoc(
+  _prev: ContractActionState,
+  formData: FormData,
+): Promise<ContractActionState> {
+  if (arePaymentsEnabled()) return paymentsBlockedState();
+  const admin = await requireAdmin();
+  const programId = String(formData.get("programId") ?? "");
+  if (!programId) return { status: "error", message: "תוכנית לא נמצאה." };
+
+  const result = await prisma.$transaction(async (tx) => {
+    const program = await tx.partnerProgram.findUnique({
+      where: { id: programId },
+      select: { id: true, status: true, contractId: true, depositHoldId: true },
+    });
+    if (!program) return { kind: "missing" as const };
+    if (program.status === "ACTIVE")
+      return { kind: "already" as const, contractId: program.contractId };
+    if (program.status !== "PENDING_DEPOSIT")
+      return { kind: "bad" as const, status: program.status };
+
+    await tx.partnerProgram.update({ where: { id: program.id }, data: { status: "ACTIVE" } });
+    await tx.contract.updateMany({
+      where: { id: program.contractId, status: "AWAITING_ESCROW" },
+      data: { status: "ACTIVE" },
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: admin.id,
+        action: "partnerProgram.activatedForPoc",
+        entityType: "PartnerProgram",
+        entityId: program.id,
+        metadata: {
+          contractId: program.contractId,
+          before: { status: "PENDING_DEPOSIT" },
+          after: { status: "ACTIVE" },
+          noDeposit: true,
+        },
+      },
+    });
+    return { kind: "ok" as const, contractId: program.contractId };
+  });
+
+  if (result.kind === "missing") return { status: "error", message: "תוכנית לא נמצאה." };
+  if (result.kind === "bad") {
+    return { status: "error", message: "אפשר להפעיל רק תוכנית שממתינה להפעלה." };
+  }
+  revalidateContract(result.contractId);
+  revalidatePath("/dashboard/admin/partner-programs");
+  return {
+    status: "success",
+    message:
+      result.kind === "already"
+        ? "התוכנית כבר פעילה."
+        : "התוכנית הופעלה (POC, בלי פיקדון) — הלינק והקופון פעילים.",
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════

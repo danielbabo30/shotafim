@@ -49,6 +49,7 @@ export async function PartnerDashboard({
           couponDiscountPct={data.couponDiscountPct}
           hasLink={data.hasLink}
           active={active}
+          paymentsEnabled={paymentsEnabled}
         />
       )}
 
