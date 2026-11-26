@@ -16,6 +16,8 @@ export function ContactInfo({
   note?: string | null;
 }) {
   const wa = whatsappHref(company);
+  // ערך טלפון "מקום-שמור" (אחרי קידומת האזור רק אפסים, כמו 03-000-0000) לא מוצג עד שיוזן מספר אמיתי ב-CMS
+  const hasRealPhone = /[1-9]/.test(company.phone.replace(/\D/g, "").replace(/^0\d/, ""));
 
   return (
     <div className="border-outline-variant bg-surface-low shadow-ambient-sm rounded-xl border p-6 sm:p-8">
@@ -31,15 +33,17 @@ export function ContactInfo({
           </a>
         </Row>
 
-        <Row icon={<PhoneIcon className="size-5" />} label="טלפון">
-          <a
-            href={telHref(company.phone)}
-            dir="ltr"
-            className="text-on-surface hover:text-primary block text-start text-sm font-medium transition-colors"
-          >
-            {company.phone}
-          </a>
-        </Row>
+        {hasRealPhone && (
+          <Row icon={<PhoneIcon className="size-5" />} label="טלפון">
+            <a
+              href={telHref(company.phone)}
+              dir="ltr"
+              className="text-on-surface hover:text-primary block text-start text-sm font-medium transition-colors"
+            >
+              {company.phone}
+            </a>
+          </Row>
+        )}
 
         {wa && (
           <Row icon={<PhoneIcon className="size-5" />} label="WhatsApp">

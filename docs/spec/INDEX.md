@@ -44,6 +44,7 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
+- [`poc-mode-payments-flag.md`](poc-mode-payments-flag.md) — דגל `PAYMENTS_UI_ENABLED`: כיבוי ממשקי כסף ב-POC
 - [`privacy-hashing.md`](privacy-hashing.md) — hash v2 לזיהויי IP/UA/לקוח בתוסף (SEC-P-13)
 
 | Feature | Spec file | Documented | Key findings for team lead |

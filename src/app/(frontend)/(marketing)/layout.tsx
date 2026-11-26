@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SkipLink } from "@/components/ui/skip-link";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { CookieConsent } from "@/components/consent/cookie-consent";
 import { SiteFooter } from "@/components/marketing/site-footer";
@@ -10,8 +11,11 @@ export const revalidate = 60;
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      <SkipLink />
       <SiteHeader />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">
+        {children}
+      </main>
       <SiteFooter />
       <CookieConsent />
     </>

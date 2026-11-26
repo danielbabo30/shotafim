@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireActiveUser, requireRole } from "@/lib/app-user";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { getAdSpaceSchedule } from "@/lib/ad-space-schedule";
 import { ScheduleGantt } from "@/components/app/ad-spaces/schedule-gantt";
 import { ChevronLeftIcon, ArrowIcon } from "@/components/marketing/icons";
 
 export const metadata: Metadata = { title: "ניהול לוז שטחי הפרסום" };
 
-const LEGEND = [
-  { label: "בנאמנות (ממתין להפקדה)", className: "bg-primary-container" },
+const legend = (payments: boolean) => [
+  {
+    label: payments ? "בנאמנות (ממתין להפקדה)" : "משוריין (ממתין להתחלה)",
+    className: "bg-primary-container",
+  },
   { label: "שידור מאושר / משדר", className: "bg-success" },
   { label: "הושלם", className: "bg-surface-highest border border-outline-variant" },
   { label: "סלוט פנוי", className: "border border-dashed border-outline-variant bg-transparent" },
@@ -32,7 +36,7 @@ export default async function BookingsPage({
           href="/dashboard/assets"
           className="text-on-surface-variant hover:text-primary inline-flex w-fit items-center gap-1 text-xs font-medium transition-colors"
         >
-          <ArrowIcon className="size-3.5" />
+          <ArrowIcon className="size-3.5 rotate-180" />
           שטחי הפרסום שלי
         </Link>
         <h1 className="text-on-surface text-2xl font-bold">יומן שיבוצים וזמני שידור</h1>
@@ -78,7 +82,7 @@ export default async function BookingsPage({
             </p>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {LEGEND.map((item) => (
+              {legend(arePaymentsEnabled()).map((item) => (
                 <span
                   key={item.label}
                   className="text-on-surface-variant flex items-center gap-1.5 text-xs"

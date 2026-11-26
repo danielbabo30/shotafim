@@ -83,7 +83,7 @@ export default async function EditAdSpaceAssetPage({
           href="/dashboard/assets"
           className="text-on-surface-variant hover:text-primary inline-flex w-fit items-center gap-1 text-xs font-medium transition-colors"
         >
-          <ArrowIcon className="size-3.5" />
+          <ArrowIcon className="size-3.5 rotate-180" />
           שטחי הפרסום שלי
         </Link>
         <h1 className="text-on-surface text-2xl font-bold">עריכת נכס פרסום</h1>

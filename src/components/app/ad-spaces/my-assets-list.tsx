@@ -92,6 +92,7 @@ export function MyAssetsList({ assets }: { assets: OwnedAsset[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="חיפוש לפי שם, מיקום או קטגוריה"
+            aria-label="חיפוש בשטחי הפרסום שלי"
             className="border-outline-variant bg-surface-low text-on-surface placeholder:text-outline focus:border-primary focus:ring-primary/30 w-full rounded-lg border py-2 ps-3 pe-9 text-sm focus:ring-2 focus:outline-none"
           />
         </div>

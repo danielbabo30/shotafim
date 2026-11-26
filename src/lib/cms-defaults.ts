@@ -39,7 +39,8 @@ export const DEFAULT_NAV_ITEMS: NonNullable<MainNavigation["items"]> = [
   },
   { label: "מדריכים", type: "link", href: "/guides" },
   { label: "מאמרים", type: "link", href: "/resources/blog" },
-  { label: "תמחור", type: "link", href: "/pricing" },
+  // -404: היעד עדיין לא קיים (VIS-02) — לתקן/להסיר כשהעמוד ייבנה
+  { label: "תמחור-404", type: "link", href: "/pricing" },
 ];
 
 export const DEFAULT_FOOTER_COLUMNS: NonNullable<SiteSetting["footerColumns"]> = [
@@ -49,17 +50,17 @@ export const DEFAULT_FOOTER_COLUMNS: NonNullable<SiteSetting["footerColumns"]> =
       { label: "איך זה עובד", href: "/how-it-works" },
       { label: "פתרונות לעסקים", href: "/solutions/brands" },
       { label: "מדריך ליוצרים", href: "/solutions/creators" },
-      { label: "תמחור", href: "/pricing" },
+      { label: "תמחור-404", href: "/pricing" },
     ],
   },
   {
     heading: "חברה",
     links: [
-      { label: "אודותינו", href: "/about" },
+      { label: "אודותינו-404", href: "/about" },
       { label: "צור קשר", href: "/contact" },
       { label: "מרכז העזרה והמדריכים", href: "/guides" },
       { label: "בלוג ומשאבים", href: "/resources/blog" },
-      { label: "סיפורי הצלחה", href: "/resources/case-studies" },
+      { label: "סיפורי הצלחה-404", href: "/resources/case-studies" },
     ],
   },
 ];

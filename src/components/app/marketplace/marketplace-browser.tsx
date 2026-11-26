@@ -48,6 +48,7 @@ export function MarketplaceBrowser({
             value={filters.query}
             onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
             placeholder="חיפוש לפי שם יוצר…"
+            aria-label="חיפוש לפי שם יוצר"
             className="border-outline-variant bg-surface-lowest text-on-surface shadow-ambient-sm focus:outline-primary w-full rounded-lg border py-3 ps-12 pe-4 text-sm focus:outline-2"
           />
         </div>

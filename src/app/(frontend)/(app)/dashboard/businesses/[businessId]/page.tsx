@@ -77,7 +77,7 @@ export default async function BusinessDetailPage({
         href="/dashboard/businesses"
         className="text-primary w-fit text-sm font-semibold hover:underline"
       >
-        ← חזרה לחיפוש עסקים
+        → חזרה לחיפוש עסקים
       </Link>
 
       <div className="border-outline-variant bg-surface-lowest shadow-ambient-sm flex flex-col gap-6 rounded-xl border p-6 sm:p-8">

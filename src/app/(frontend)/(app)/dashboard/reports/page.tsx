@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
+import { redirect } from "next/navigation";
 import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { getReportsData, ESCROW_STATUS_META } from "@/lib/reports";
@@ -21,6 +23,8 @@ export const metadata: Metadata = { title: "דוחות" };
 export default async function ReportsPage() {
   const user = await requireActiveUser();
   requireRole(user, ["brand", "admin"]);
+  // מצב POC: דוחות כספיים (נאמנות/חשבוניות) כבויים
+  if (!arePaymentsEnabled()) redirect("/dashboard");
   const data = await getReportsData(user.id);
   const { kpis } = data;
 

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
+import { redirect } from "next/navigation";
 import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
 import {
@@ -34,6 +36,8 @@ const TXN_STATUS_LABEL: Record<string, string> = {
 export default async function EarningsPage() {
   const user = await requireActiveUser();
   requireRole(user, ["creator"]);
+  // מצב POC: אין מסך הכנסות/משיכה — התשלום מחוץ למערכת
+  if (!arePaymentsEnabled()) redirect("/dashboard");
 
   const data = await getCreatorEarnings(user.id, true);
   const { kpis, escrow, transactions, invoices } = data;

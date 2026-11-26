@@ -29,7 +29,7 @@ export async function SiteFooter() {
                   <li key={j}>
                     <Link
                       href={link.href}
-                      className="text-on-surface-variant hover:text-primary text-sm transition-colors"
+                      className="text-on-surface-variant hover:text-primary -my-1.5 inline-flex min-h-11 items-center text-sm transition-colors md:min-h-0 md:py-0"
                     >
                       {link.label}
                     </Link>
@@ -53,12 +53,12 @@ export async function SiteFooter() {
               <Link
                 key={i}
                 href={link.href}
-                className="text-on-surface-variant hover:text-primary text-xs transition-colors"
+                className="text-on-surface-variant hover:text-primary inline-flex min-h-11 items-center text-xs transition-colors md:min-h-0"
               >
                 {link.label}
               </Link>
             ))}
-            <CookieSettingsLink className="text-on-surface-variant hover:text-primary text-xs transition-colors" />
+            <CookieSettingsLink className="text-on-surface-variant hover:text-primary inline-flex min-h-11 items-center text-xs transition-colors md:min-h-0" />
           </div>
         </div>
       </Container>

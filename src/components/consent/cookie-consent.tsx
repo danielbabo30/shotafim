@@ -148,21 +148,21 @@ export function CookieConsent() {
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
               variant="primary"
-              className="flex-1"
+              className="min-h-11 flex-1"
               onClick={() => commit({ analytics: true, marketing: true })}
             >
               אישור הכל
             </Button>
             <Button
               variant="primary"
-              className="flex-1"
+              className="min-h-11 flex-1"
               onClick={() => commit({ analytics: false, marketing: false })}
             >
               דחיית עוגיות לא הכרחיות
             </Button>
             <Button
               variant="ghost"
-              className="flex-1"
+              className="min-h-11 flex-1"
               onClick={() => {
                 openerRef.current = null;
                 openPanel();
@@ -225,7 +225,7 @@ export function CookieConsent() {
                         !locked && setChoice((c) => ({ ...c, [cat.key]: !c[cat.key] }))
                       }
                       className={cn(
-                        "focus-visible:outline-primary relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60",
+                        "focus-visible:outline-primary relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60",
                         on ? "bg-primary" : "bg-outline-variant",
                       )}
                     >
@@ -241,19 +241,19 @@ export function CookieConsent() {
               })}
             </ul>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button variant="primary" className="flex-1" onClick={() => commit(choice)}>
+              <Button variant="primary" className="min-h-11 flex-1" onClick={() => commit(choice)}>
                 שמירת הבחירה
               </Button>
               <Button
                 variant="primary"
-                className="flex-1"
+                className="min-h-11 flex-1"
                 onClick={() => commit({ analytics: true, marketing: true })}
               >
                 אישור הכל
               </Button>
               <Button
                 variant="primary"
-                className="flex-1"
+                className="min-h-11 flex-1"
                 onClick={() => commit({ analytics: false, marketing: false })}
               >
                 דחיית הכל
@@ -262,7 +262,7 @@ export function CookieConsent() {
             <button
               type="button"
               onClick={close}
-              className="text-on-surface-variant hover:text-primary mt-4 text-sm"
+              className="text-on-surface-variant hover:text-primary mt-4 inline-flex min-h-11 items-center text-sm"
             >
               סגירה בלי שמירה
             </button>

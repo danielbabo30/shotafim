@@ -13,11 +13,14 @@ export function SidebarContent({
   siteName,
   activeRole,
   onNavigate,
+  showPayments = true,
 }: {
   siteName: string;
   activeRole: RoleKey;
   /** נמסר רק מהמגירה במובייל — לסגירה בעת ניווט */
   onNavigate?: () => void;
+  /** false במצב POC (PAYMENTS_UI_ENABLED=false) — מסתיר פריטי ניווט כספיים */
+  showPayments?: boolean;
 }) {
   const role = ROLE_META[activeRole];
 
@@ -49,9 +52,11 @@ export function SidebarContent({
 
       {/* ניווט ראשי */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-        {role.nav.map((item) => (
-          <NavLink key={item.href} item={item} onNavigate={onNavigate} />
-        ))}
+        {role.nav
+          .filter((item) => showPayments || !item.payments)
+          .map((item) => (
+            <NavLink key={item.href} item={item} onNavigate={onNavigate} />
+          ))}
       </nav>
 
       {/* ניווט תחתון + יציאה */}

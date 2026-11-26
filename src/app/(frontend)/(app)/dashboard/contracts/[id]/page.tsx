@@ -6,6 +6,7 @@ import { getContractReviewContext } from "@/lib/reviews";
 import { getContractProofs } from "@/lib/proof-of-play";
 import { getPartnerProgramForContract } from "@/lib/partner-program";
 import { getContractDisputeContext } from "@/lib/disputes";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { getCities } from "@/lib/cities";
 import {
   CONTRACT_STATUS_META,
@@ -43,19 +44,31 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
   const latestStatus = latest?.status ?? null;
   const released = room.status === "APPROVED" || room.escrowStatus === "RELEASED_TO_PROVIDER";
 
+  const paymentsEnabled = arePaymentsEnabled();
+
   const milestones = [
-    {
-      label: "התקציב הופקד לנאמנות",
-      done: room.escrowFunded || room.status !== "AWAITING_ESCROW",
-    },
+    ...(paymentsEnabled
+      ? [
+          {
+            label: "התקציב הופקד לנאמנות",
+            done: room.escrowFunded || room.status !== "AWAITING_ESCROW",
+          },
+        ]
+      : []),
     {
       label: latest ? `גרסה v${latest.version} הועלתה לבדיקה` : "העלאת תוצר לבדיקה",
       done: room.submissions.length > 0,
     },
-    { label: "אישור סופי של המפרסם ושחרור תשלום", done: room.status === "APPROVED" },
+    {
+      label: paymentsEnabled ? "אישור סופי של המפרסם ושחרור תשלום" : "אישור סופי של המפרסם",
+      done: room.status === "APPROVED",
+    },
   ];
 
-  const statusMeta = CONTRACT_STATUS_META[room.status];
+  const statusMeta =
+    !paymentsEnabled && room.status === "AWAITING_ESCROW"
+      ? { ...CONTRACT_STATUS_META.AWAITING_ESCROW, label: "ממתין להתחלה" }
+      : CONTRACT_STATUS_META[room.status];
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -75,7 +88,11 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
             <h1 className="text-on-surface text-xl font-bold">
               {isBrand ? "עבודה מול " : "עבודה עבור "}
               <span className="text-primary">
-                {room.counterparty.handle ? `@${room.counterparty.handle}` : room.counterparty.name}
+                {room.counterparty.handle ? (
+                  <bdi dir="ltr">@{room.counterparty.handle}</bdi>
+                ) : (
+                  room.counterparty.name
+                )}
               </span>
             </h1>
             <span
@@ -117,8 +134,8 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
       <aside className="flex flex-col gap-6 lg:col-span-4">
         {partnerProgram ? (
           <>
-            <PartnerProgramPanel program={partnerProgram} />
-            <PartnerDashboard contractId={room.id} />
+            <PartnerProgramPanel program={partnerProgram} paymentsEnabled={paymentsEnabled} />
+            <PartnerDashboard contractId={room.id} paymentsEnabled={paymentsEnabled} />
           </>
         ) : (
           <EscrowPanel
@@ -139,6 +156,7 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
             }
             revisionRoundsLeft={Math.max(0, room.revisionRoundsMax - room.revisionRoundsUsed)}
             released={released}
+            paymentsEnabled={paymentsEnabled}
           />
         )}
 

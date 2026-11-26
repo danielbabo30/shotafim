@@ -29,7 +29,9 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
         <Link href="/" className="text-xl font-bold">
           {site.name}
         </Link>
-        <p className="mt-1 text-sm text-black/60 dark:text-white/60">כניסה לאזור האישי</p>
+        <h1 className="mt-1 text-sm font-normal text-black/60 dark:text-white/60">
+          כניסה לאזור האישי
+        </h1>
       </div>
 
       {check === "email" && (
@@ -98,7 +100,9 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
             type="email"
             name="email"
             required
-            placeholder="you@example.com"
+            dir="ltr"
+            aria-label="כתובת אימייל"
+            placeholder="name@company.com"
             className="w-full rounded-lg border border-black/15 px-4 py-2.5 dark:border-white/20"
           />
           <button

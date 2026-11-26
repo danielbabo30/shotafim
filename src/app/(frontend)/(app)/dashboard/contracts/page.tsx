@@ -1,3 +1,4 @@
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listContracts } from "@/lib/contracts";
@@ -27,13 +28,18 @@ export default async function ContractsPage() {
         <div className="border-outline-variant bg-surface-lowest shadow-ambient-sm rounded-lg border border-dashed p-10 text-center">
           <h2 className="text-on-surface text-lg font-bold">עוד אין חוזים</h2>
           <p className="text-on-surface-variant mx-auto mt-2 max-w-md text-sm leading-relaxed">
-            חוזה נוצר לאחר אישור הצעת מחיר של יוצר והפקדת התקציב לנאמנות.
+            {arePaymentsEnabled()
+              ? "חוזה נוצר לאחר אישור הצעת מחיר של יוצר והפקדת התקציב לנאמנות."
+              : "חוזה נוצר לאחר אישור הצעת מחיר של יוצר."}
           </p>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
           {contracts.map((c) => {
-            const meta = CONTRACT_STATUS_META[c.status];
+            const meta =
+              !arePaymentsEnabled() && c.status === "AWAITING_ESCROW"
+                ? { ...CONTRACT_STATUS_META.AWAITING_ESCROW, label: "ממתין להתחלה" }
+                : CONTRACT_STATUS_META[c.status];
             return (
               <li key={c.id}>
                 <Link

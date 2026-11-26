@@ -7,7 +7,15 @@ import { SidebarContent } from "@/components/app/sidebar-content";
 import type { RoleKey } from "@/lib/app-nav";
 
 /** מגירת ניווט למובייל — כפתור ההפעלה בטופ-בר + פאנל נשלף */
-export function MobileSidebar({ siteName, activeRole }: { siteName: string; activeRole: RoleKey }) {
+export function MobileSidebar({
+  siteName,
+  activeRole,
+  showPayments = true,
+}: {
+  siteName: string;
+  activeRole: RoleKey;
+  showPayments?: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -37,6 +45,7 @@ export function MobileSidebar({ siteName, activeRole }: { siteName: string; acti
           <SidebarContent
             siteName={siteName}
             activeRole={activeRole}
+            showPayments={showPayments}
             onNavigate={() => setOpen(false)}
           />
         </div>

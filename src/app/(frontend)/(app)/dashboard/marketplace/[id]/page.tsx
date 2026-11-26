@@ -150,7 +150,8 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
                       rel="noreferrer"
                       className="text-primary inline-flex items-center gap-1 text-xs hover:underline"
                     >
-                      <LinkIcon className="size-3" />@{ch.handle}
+                      <LinkIcon className="size-3" />
+                      <bdi dir="ltr">@{ch.handle}</bdi>
                     </a>
                   </div>
                 </div>

@@ -57,6 +57,7 @@ export function AdSpaceExplorer({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="חיפוש לפי עיר, צומת, שם מסך או ספק…"
+              aria-label="חיפוש שטחי פרסום"
               className="border-outline-variant bg-surface-low text-on-surface placeholder:text-on-surface-variant focus:outline-primary w-full rounded-lg border py-2 ps-9 pe-3 text-sm focus:outline-2"
             />
           </div>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/container";
-import { ContactForm } from "@/components/marketing/contact-form";
 import { ContactInfo } from "@/components/marketing/contact-info";
 import { getContactData } from "@/lib/contact";
 import { getCompanyInfo } from "@/lib/company-info";
@@ -12,10 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
-  const [{ hero, form, details }, company] = await Promise.all([
-    getContactData(),
-    getCompanyInfo(),
-  ]);
+  const [{ hero, details }, company] = await Promise.all([getContactData(), getCompanyInfo()]);
 
   return (
     <Container className="py-16 lg:py-24">
@@ -30,13 +26,12 @@ export default async function ContactPage() {
         <p className="text-on-surface-variant mt-4 text-lg leading-relaxed">{hero.body}</p>
       </div>
 
-      <div className="mt-14 grid gap-8 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <ContactForm form={form} />
-        </div>
-        <div className="lg:col-span-2">
-          <ContactInfo company={company} heading={details.heading} note={details.note} />
-        </div>
+      {/*
+        טופס יצירת הקשר הוסתר עד שיחובר למערכת פניות אמיתית (אין מודל/endpoint לפניות).
+        עד אז מוצגים רק פרטי הקשר מ-CMS ("מידע על החברה"). ראו VISUAL-FIXES VIS-14.
+      */}
+      <div className="mx-auto mt-14 max-w-2xl">
+        <ContactInfo company={company} heading={details.heading} note={details.note} />
       </div>
     </Container>
   );

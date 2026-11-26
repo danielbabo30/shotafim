@@ -67,7 +67,7 @@ export function StoreConnectPanel({ stores }: { stores: ConnectedStore[] }) {
           <p className="text-on-error-container text-xs font-medium">{state.message}</p>
         )}
         <p className="text-on-surface-variant text-xs leading-relaxed">
-          נייצר קוד צימוד ייחודי לחנות הזו. הדביקו אותו בתוסף (WooCommerce ▸ BridgeAd) כדי לחבר.
+          נייצר קוד צימוד ייחודי לחנות הזו. הדביקו אותו בתוסף (WooCommerce ◂ BridgeAd) כדי לחבר.
         </p>
       </form>
     </div>
@@ -154,7 +154,7 @@ function KeyReveal({ siteUrl, token }: { siteUrl: string; token: string }) {
     <div className="border-primary/40 bg-primary-fixed/25 flex flex-col gap-2 rounded-xl border p-4">
       <p className="text-on-surface text-sm font-bold">קוד הצימוד נוצר עבור {siteUrl}</p>
       <p className="text-on-surface-variant text-xs">
-        מוצג פעם אחת בלבד. הדביקו אותו בשדה “קוד צימוד” בהגדרות התוסף (WooCommerce ▸ BridgeAd). אם
+        מוצג פעם אחת בלבד. הדביקו אותו בשדה “קוד צימוד” בהגדרות התוסף (WooCommerce ◂ BridgeAd). אם
         איבדתם — צרו חדש דרך “החלף מפתח”.
       </p>
       <div className="flex items-center gap-2">

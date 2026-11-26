@@ -1,9 +1,11 @@
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { listDiscoverCampaigns } from "@/lib/applications";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { deliverableLabel, targetTypeLabel } from "@/lib/campaign-brief";
+import { pluralHe } from "@/lib/plural";
 import { ArrowIcon, CalendarIcon, UsersIcon } from "@/components/marketing/icons";
 
 export const metadata: Metadata = { title: "גילוי בריפים" };
@@ -22,7 +24,7 @@ export default async function DiscoverPage() {
         <h1 className="text-on-surface text-2xl font-bold">גילוי בריפים</h1>
         <p className="text-on-surface-variant mt-1 max-w-2xl text-sm leading-relaxed">
           בריפים פתוחים של מפרסמים שמתאימים לחשבון שלך. הגש הצעה — עם אישור המפרסם נפתח חדר עבודה
-          ותקציב מובטח בנאמנות.
+          {arePaymentsEnabled() ? " ותקציב מובטח בנאמנות." : "."}
         </p>
       </div>
 
@@ -74,7 +76,7 @@ export default async function DiscoverPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <UsersIcon className="size-3.5" />
-                  {c.applicationCount} הצעות
+                  {pluralHe(c.applicationCount, "הצעה אחת", "הצעות")}
                 </div>
               </dl>
 

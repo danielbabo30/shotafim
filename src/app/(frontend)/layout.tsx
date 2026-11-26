@@ -1,24 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Assistant, Heebo } from "next/font/google";
+import { assistant, heebo } from "@/lib/fonts";
 import "./globals.css";
 import { site } from "@/lib/site";
-
-// כותרות ותוויות — טכני ומודרני (תחליף עברי ל-Geist)
-const assistant = Assistant({
-  subsets: ["hebrew", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-assistant",
-  display: "swap",
-});
-
-// טקסט גוף — קריאוּת מקסימלית (תחליף עברי ל-Inter)
-const heebo = Heebo({
-  subsets: ["hebrew", "latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-heebo",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {

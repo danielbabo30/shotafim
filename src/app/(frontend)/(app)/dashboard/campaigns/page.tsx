@@ -132,10 +132,12 @@ export default async function CampaignsPage({
 
               <Link
                 href={`/dashboard/campaigns/${campaign.id}`}
-                className="text-primary mt-4 inline-block text-sm font-medium hover:underline"
+                className="text-primary mt-2 inline-flex min-h-11 items-center text-sm font-medium hover:underline"
               >
                 {campaign.applicationCount > 0
-                  ? `צפייה ב-${campaign.applicationCount} הצעות ←`
+                  ? campaign.applicationCount === 1
+                    ? "צפייה בהצעה ←"
+                    : `צפייה ב-${campaign.applicationCount} הצעות ←`
                   : "צפייה בבריף ←"}
               </Link>
             </li>

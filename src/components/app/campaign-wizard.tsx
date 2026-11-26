@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useId, useMemo, useState, type ReactNode } from "react";
+import { POC_PAYMENT_NOTICE } from "@/lib/payments-notice";
+import { useActionState, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AttributionMode,
   CampaignTargetType,
@@ -73,7 +74,13 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-export function CampaignWizard({ locations }: { locations: { id: string; label: string }[] }) {
+export function CampaignWizard({
+  locations,
+  paymentsEnabled = true,
+}: {
+  locations: { id: string; label: string }[];
+  paymentsEnabled?: boolean;
+}) {
   const [state, formAction, isPending] = useActionState(createCampaign, CAMPAIGN_FORM_INITIAL);
   const [step, setStep] = useState<StepId>(1);
   const uid = useId();
@@ -106,10 +113,16 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
   const STEPS: { id: StepId; label: string }[] = [
     { id: 1, label: "הגדרות בסיס" },
     { id: 2, label: isRevShare ? "תוצרים" : "תוצרים ותקציב" },
-    { id: 3, label: isRevShare ? "תנאי שותפות" : "הפקדת Escrow" },
+    {
+      id: 3,
+      label: isRevShare ? "תנאי שותפות" : paymentsEnabled ? "הפקדה לנאמנות" : "סיכום ופרסום",
+    },
   ];
 
   const [stepError, setStepError] = useState<string | null>(null);
+  // שגיאת כותרת מקומית — מוצגת ליד השדה (עם פוקוס וגלילה אליו), לא בתחתית הטופס
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const fieldErrors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
 
   /** אילו שלבים מכילים שגיאת שדה שהשרת החזיר — לסימון ב-stepper */
@@ -126,9 +139,12 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
 
   const goNext = () => {
     if (step === 1 && title.trim().length < 2) {
-      setStepError("יש להזין כותרת לבריף כדי להמשיך.");
+      setTitleError("יש להזין כותרת לבריף כדי להמשיך.");
+      titleRef.current?.focus();
+      titleRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
+    setTitleError(null);
     setStepError(null);
     setStep((s) => (s < 3 ? ((s + 1) as StepId) : s));
   };
@@ -318,12 +334,17 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
                 id={`${uid}-title`}
                 name="title"
                 type="text"
+                ref={titleRef}
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                aria-invalid={titleError || fieldErrors.title ? true : undefined}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (titleError) setTitleError(null);
+                }}
                 placeholder="לדוגמה: יוצרי קולינריה להשקת סניף חדש בנמל תל אביב"
                 className={fieldClass}
               />
-              <FieldError>{fieldErrors.title}</FieldError>
+              <FieldError>{titleError ?? fieldErrors.title}</FieldError>
             </div>
 
             <div>
@@ -804,8 +825,9 @@ export function CampaignWizard({ locations }: { locations: { id: string; label: 
             <ShieldCheckIcon className="text-primary mt-0.5 size-6 shrink-0" />
             <div className="text-sm leading-relaxed">
               <p className="text-on-surface font-medium">
-                התקציב יופקד לנאמנות (Escrow) רק לאחר שתאשרו הצעת יוצר ספציפית, וישוחרר רק כשתאשרו
-                את התוצר הסופי.
+                {paymentsEnabled
+                  ? "התקציב יופקד לנאמנות (Escrow) רק לאחר שתאשרו הצעת יוצר ספציפית, וישוחרר רק כשתאשרו את התוצר הסופי."
+                  : POC_PAYMENT_NOTICE + "."}
               </p>
               <p className="text-on-surface-variant mt-2">
                 בשלב זה אין חיוב. שמירה כטיוטה שומרת את הבריף לעריכה; פרסום פותח אותו לקבלת הצעות

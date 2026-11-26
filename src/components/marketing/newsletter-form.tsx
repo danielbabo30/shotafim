@@ -37,6 +37,7 @@ export function NewsletterForm({ newsletter }: { newsletter: Newsletter }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={newsletter.placeholder ?? ""}
+            aria-label="כתובת אימייל להרשמה לניוזלטר"
             className="border-outline-variant bg-surface-lowest focus:border-primary focus:ring-primary/20 w-full rounded-lg border px-4 py-2 text-sm transition-all focus:ring-2 focus:outline-none"
           />
           <button

@@ -74,6 +74,14 @@
 
   body {
     font-family: var(--font-sans);
+    overflow-wrap: break-word;
+  }
+
+  /* טקסט חופשי (בריפים, הודעות, תיאורים, ביו, כרטיסים): מחרוזת ארוכה בלי רווחים
+     (למשל URL) נשברת בתוך הרכיב ולא דוחפת את הפריסה במובייל.
+     :where → specificity אפס, אפשר לדרוס עם מחלקת Tailwind (למשל break-normal). */
+  :where(p, h1, h2, h3, h4, h5, h6, li, dd, blockquote, figcaption) {
+    overflow-wrap: anywhere;
   }
 
   h1,

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { SettingsFormState } from "@/lib/actions/settings-form-state";
 
@@ -40,6 +40,12 @@ export function SectionCard({
   );
 }
 
+const CONTROL_TAGS = new Set(["input", "textarea", "select"]);
+
+/**
+ * שדה עם תווית. התווית מקושרת אוטומטית ל-input/textarea/select הישיר (id נוצר עם useId),
+ * כך שקורא מסך מכריז עליה. לשדה עטוף (לא ילד ישיר) — להעביר htmlFor ו-id ידנית.
+ */
 export function Field({
   label,
   hint,
@@ -53,12 +59,25 @@ export function Field({
   children: ReactNode;
   htmlFor?: string;
 }) {
+  const autoId = useId();
+  let controlId = htmlFor;
+  let content = children;
+  if (
+    !controlId &&
+    isValidElement(children) &&
+    typeof children.type === "string" &&
+    CONTROL_TAGS.has(children.type)
+  ) {
+    const el = children as ReactElement<{ id?: string }>;
+    controlId = el.props.id ?? autoId;
+    if (!el.props.id) content = cloneElement(el, { id: controlId });
+  }
   return (
     <div>
-      <label htmlFor={htmlFor} className="text-on-surface mb-2 block text-sm font-medium">
+      <label htmlFor={controlId} className="text-on-surface mb-2 block text-sm font-medium">
         {label} {hint && <span className="text-on-surface-variant font-normal">({hint})</span>}
       </label>
-      {children}
+      {content}
       <FieldError>{error}</FieldError>
     </div>
   );
