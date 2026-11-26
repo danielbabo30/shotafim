@@ -63,17 +63,19 @@ class Bridgead_Tracker {
 			return;
 		}
 
-		$salt = $api->daily_salt();
 		$ua   = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 
 		$payload = array(
 			'refCode'    => $ref,
 			'occurredAt' => gmdate( 'c' ),
 			'landingUrl' => esc_url_raw( $landing ),
-			'ipHash'     => hash( 'sha256', self::client_ip() . $salt ),
+			'ipHash'     => $api->ip_hash( self::client_ip() ),
 		);
+		if ( 2 === $api->hash_version() ) {
+			$payload['hashVersion'] = 2;
+		}
 		if ( '' !== $ua ) {
-			$payload['uaHash'] = hash( 'sha256', $ua . $salt );
+			$payload['uaHash'] = $api->ua_hash( $ua );
 		}
 		$country = self::country();
 		if ( $country ) {

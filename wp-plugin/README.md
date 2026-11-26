@@ -54,14 +54,19 @@ headers:
 
 **צימוד:** האזור האישי מנפיק `siteId.apiKey`. התוסף מפצל ושומר את שניהם ב-`wp_options`.
 `X-BridgeAd-Site` = `siteId`. `apiKey` הוא מפתח ה-HMAC — לא נשלח אחרי הצימוד.
-`sitePepper = sha256("pepper:" + apiKey)` · `dailySalt = siteId + YYYY-MM-DD`.
+**Hash פרטיות (v2, תוסף 0.2.0+, SEC-P-13):** ראו `docs/spec/privacy-hashing.md`.
+`privacyKey` (64 hex) נגזר בשרת (HKDF מ-`TRACK_KEY_SECRET`, salt=`siteId`) ונמסר לתוסף פעם אחת בתשובת `heartbeat`
+כשהבקשה כוללת `needsPrivacyKey: true`; התוסף שומר ב-`bridgead_privacy_key` (autoload=no). תת-מפתחות: `HMAC(privacyKey, "ip"|"ua"|"customer")`.
+`ipHash = "v2:" + HMAC(k_ip, "YYYY-MM-DD|" + truncatedIp)` (IPv4→/24, IPv6→/48) · `uaHash = "v2:" + HMAC(k_ua, date|ua)` ·
+`customerHash = "v2:" + HMAC(k_customer, lower(trim(email)))`. בקליק/הזמנה נשלח `hashVersion: 2`; השרת מחייב פורמט `v2:<64 hex>` (422 אחרת).
+ללא `hashVersion` (תוסף ישן / אין עדיין מפתח) = v1 הישן: `sha256(ip+siteId+date)`, `sha256(email + sha256("pepper:"+apiKey))`.
 
 | endpoint | מתי | payload |
 | --- | --- | --- |
-| `POST /api/track/click` | קליק על `?bgad_ref` | `refCode, occurredAt, landingUrl, ipHash, uaHash?, country?` |
-| `POST /api/track/order` | `woocommerce_payment_complete` | `externalOrderId, orderPlacedAt, currency, orderStatus, amounts{itemsSubtotal,discountTotal,taxTotal,shippingTotal,grandTotal}, lineItems[]{sku,productId,name,quantity,lineSubtotal,lineDiscount,isReferredProduct}, couponCodes[], refCode?, customerHash, isNewCustomer` |
+| `POST /api/track/click` | קליק על `?bgad_ref` | `refCode, occurredAt, landingUrl, ipHash, uaHash?, country?, hashVersion?` |
+| `POST /api/track/order` | `woocommerce_payment_complete` | `externalOrderId, orderPlacedAt, currency, orderStatus, amounts{itemsSubtotal,discountTotal,taxTotal,shippingTotal,grandTotal}, lineItems[]{sku,productId,name,quantity,lineSubtotal,lineDiscount,isReferredProduct}, couponCodes[], refCode?, customerHash, isNewCustomer, hashVersion?` |
 | `POST /api/track/order-status` | מעבר סטטוס / החזר חלקי | `externalOrderId, newStatus, refundedAmount?, occurredAt` |
-| `POST /api/plugin/heartbeat` | כל 6 שעות · גם "בדיקת חיבור" | `pluginVersion, wooVersion, wpVersion?, phpVersion?, ordersSinceLast, stuckWebhookQueue, sentAt` → `{ siteStatus, linksLive }` |
+| `POST /api/plugin/heartbeat` | כל 6 שעות · גם "בדיקת חיבור" | `pluginVersion, wooVersion, wpVersion?, phpVersion?, ordersSinceLast, stuckWebhookQueue, sentAt, needsPrivacyKey?` (תשובה כוללת `privacyKey` רק כשנתבקש) → `{ siteStatus, linksLive }` |
 | `POST /api/plugin/deactivated` | `register_deactivation_hook` | `deactivatedAt, reason?` |
 | `POST /api/track/digest` | לילי | `periodStart, periodEnd, orders[], totals{orderCount,grossAmount}` |
 

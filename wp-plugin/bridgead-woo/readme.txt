@@ -4,7 +4,7 @@ Tags: woocommerce, affiliate, tracking, influencer, revenue-share
 Requires at least: 6.3
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 הייחודיים של היוצרים שאיתם אתה עובד ב-BridgeAd. הנתונים נשלחים חתומים ל-BridgeAd, שם
 מחושבת העמלה שמגיעה לכל יוצר. אין גישה לנתוני החנות מעבר לנדרש למעקב.
 
-* מעקב קליקים ורכישות בצד השרת (עמיד לחוסמי פרסומות ובאנרי הסכמה)
+* מעקב שיוך שרת-לשרת לשותפויות תשלום-פר-רכישה
 * שיוך לפי קישור ייחודי או קוד קופון של היוצר
 * עדכון אוטומטי בעת החזר / ביטול
 * תור שליחה חוזרת + digest לילי — שום רכישה משויכת לא הולכת לאיבוד
@@ -29,6 +29,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 3. לחץ "בדיקת חיבור" כדי לוודא שהחנות מצומדת.
 
 == Changelog ==
+
+= 0.2.0 =
+* פרטיות (SEC-P-13): כתובת ה-IP מצומצמת (IPv4 ‏/24, IPv6 ‏/48) לפני hash; ה-hash של IP / דפדפן / אימייל לקוח מחושב כ-HMAC-SHA256 עם מפתח פרטיות נפרד שנשמר רק בחנות (`hashVersion` = 2).
+* תאימות לאחור: עד קבלת המפתח (heartbeat הראשון אחרי העדכון) נשלחים hash בגרסה 1.
 
 = 0.1.0 =
 * גרסה ראשונה — צימוד, מעקב קליקים ורכישות, החזרים, תור retry, digest, heartbeat, מסך הגדרות.

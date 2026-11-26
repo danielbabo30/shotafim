@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateTrackRequest } from "@/lib/track/auth";
 import { heartbeatPayloadSchema } from "@/lib/track/schemas";
+import { derivePrivacyKey } from "@/lib/track/crypto";
 import { badRequest, ok, parseJsonBody } from "@/lib/track/http";
 
 /** POST /api/plugin/heartbeat — אות חיים כל 6 שעות (§5). מחזיר אתר ל-ACTIVE. */
@@ -45,7 +46,18 @@ export async function POST(request: Request) {
     },
   });
 
+  // SEC-P-13: מפתח פרטיות נמסר רק לבקשה חתומה שמבקשת אותו (פעם אחת, מעל TLS)
+  let privacyKey: string | undefined;
+  if (hb.needsPrivacyKey) {
+    try {
+      privacyKey = derivePrivacyKey(auth.site.id);
+    } catch {
+      privacyKey = undefined;
+    }
+  }
+
   return ok({
+    ...(privacyKey ? { privacyKey } : {}),
     siteStatus: "ACTIVE",
     linksLive,
     serverTime: now.toISOString(),

@@ -4,7 +4,8 @@ import { env } from "@/env";
 
 /**
  * הגנה על endpoints של cron. בפרודקשן — חובה `Authorization: Bearer <CRON_SECRET>`
- * (או הכותרת `x-vercel-cron` ש-Vercel Cron שולח). בפיתוח, כשאין CRON_SECRET — פתוח,
+ * (Vercel Cron שולח אותה אוטומטית כש-CRON_SECRET מוגדר). הכותרת `x-vercel-cron` ניתנת
+ * לזיוף ולכן לא נחשבת הוכחה. בפיתוח, כשאין CRON_SECRET — פתוח,
  * כדי לאפשר הרצה ידנית של הבדיקות.
  */
 export function authorizeCron(request: Request): NextResponse | null {
@@ -15,7 +16,6 @@ export function authorizeCron(request: Request): NextResponse | null {
     return null; // dev — allow
   }
   const auth = request.headers.get("authorization");
-  const isVercelCron = request.headers.get("x-vercel-cron") != null;
-  if (auth === `Bearer ${env.CRON_SECRET}` || isVercelCron) return null;
+  if (auth === `Bearer ${env.CRON_SECRET}`) return null;
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }

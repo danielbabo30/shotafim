@@ -3,7 +3,7 @@
  * Plugin Name:       BridgeAd — מעקב שותפויות
  * Plugin URI:        https://app.bridgead.co.il/dashboard/plugin
  * Description:        מחבר את חנות ה-WooCommerce שלך ל-BridgeAd: דוגם קליקים ורכישות דרך קישורי השיוך והקופונים של היוצרים, ומחשב את העמלה שמגיעה לכל יוצר.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.3
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BRIDGEAD_VERSION', '0.1.0' );
+define( 'BRIDGEAD_VERSION', '0.2.0' );
 define( 'BRIDGEAD_FILE', __FILE__ );
 define( 'BRIDGEAD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BRIDGEAD_URL', plugin_dir_url( __FILE__ ) );

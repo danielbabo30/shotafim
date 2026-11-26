@@ -5,7 +5,12 @@ import {
   MONITOR_CLICK_LOOKBACK_HOURS,
   MONITOR_GRACE_HOURS,
 } from "@/lib/partner-constants";
-import { decryptApiKey, sha256Hex } from "@/lib/track/crypto";
+import {
+  customerHashV1,
+  customerHashV2,
+  decryptApiKey,
+  derivePrivacyKey,
+} from "@/lib/track/crypto";
 import { emailSiteAdminTrackingOffline, notifyPartnership } from "@/lib/track/notify";
 import { detectAnomalies } from "@/lib/track/anomaly";
 
@@ -155,19 +160,21 @@ export async function runMonitor(): Promise<{
   let anomalies = 0;
   for (const prog of activePrograms) {
     // customerHash של היוצר — לזיהוי רכישה עצמית
-    let creatorCustomerHashes: string[] = [];
+    const creatorCustomerHashes: string[] = [];
     if (prog.contract.provider.email) {
-      const site = await prisma.trackedSite.findFirst({
+      const sites = await prisma.trackedSite.findMany({
         where: { businessId: prog.contract.businessId },
-        select: { apiKeyEnc: true },
+        select: { id: true, apiKeyEnc: true },
       });
-      if (site) {
+      for (const site of sites) {
         try {
           const apiKey = decryptApiKey(site.apiKeyEnc);
-          const pepper = sha256Hex(`pepper:${apiKey}`);
-          creatorCustomerHashes = [
-            sha256Hex(prog.contract.provider.email.trim().toLowerCase() + pepper),
-          ];
+          // v1 (תוסף ישן) + v2 (SEC-P-13) — שניהם נבדקים כדי לא לפספס רכישה עצמית
+          const email = prog.contract.provider.email;
+          creatorCustomerHashes.push(
+            customerHashV1(apiKey, email),
+            customerHashV2(derivePrivacyKey(site.id), email),
+          );
         } catch {
           /* ignore */
         }

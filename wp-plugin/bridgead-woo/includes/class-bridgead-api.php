@@ -51,6 +51,124 @@ class Bridgead_Api {
 		return '' === $c['api_key'] ? '' : hash( 'sha256', 'pepper:' . $c['api_key'] );
 	}
 
+	const PRIVACY_OPTION = 'bridgead_privacy_key';
+
+	/**
+	 * מפתח הפרטיות (SEC-P-13) — סוד נפרד מ-apiKey, נמסר פעם אחת מהשרת ב-heartbeat
+	 * ונשמר רק כאן (autoload=no). ריק = עדיין לא התקבל → נשארים על hash v1 (תאימות לאחור).
+	 */
+	public function privacy_key() {
+		$key = get_option( self::PRIVACY_OPTION, '' );
+		return ( is_string( $key ) && preg_match( '/^[0-9a-f]{64}$/', $key ) ) ? $key : '';
+	}
+
+	/**
+	 * גרסת ה-hash לשליחה: 2 אם יש privacyKey, אחרת 1 (ישן).
+	 */
+	public function hash_version() {
+		return '' === $this->privacy_key() ? 1 : 2;
+	}
+
+	/**
+	 * תת-מפתח לפי הקשר (ip|ua|customer) — HMAC-SHA256(privacyKey, purpose), בינארי.
+	 */
+	private function privacy_subkey( $purpose ) {
+		return hash_hmac( 'sha256', $purpose, $this->privacy_key(), true );
+	}
+
+	/**
+	 * צמצום IP לפני hash: IPv4 → /24, IPv6 → /48 (IPv4-mapped מטופל כ-IPv4).
+	 * מחזיר מחרוזת קנונית (inet_ntop) או '' אם הקלט אינו IP תקין.
+	 */
+	public static function truncate_ip( $ip ) {
+		$bin = @inet_pton( (string) $ip );
+		if ( false === $bin ) {
+			return '';
+		}
+		if ( 16 === strlen( $bin ) && str_repeat( "\0", 10 ) . "\xff\xff" === substr( $bin, 0, 12 ) ) {
+			$bin = substr( $bin, 12 ); // ::ffff:a.b.c.d
+		}
+		if ( 4 === strlen( $bin ) ) {
+			$bin = substr( $bin, 0, 3 ) . "\0";
+		} else {
+			$bin = substr( $bin, 0, 6 ) . str_repeat( "\0", 10 );
+		}
+		return inet_ntop( $bin );
+	}
+
+	/**
+	 * ipHash v2 = "v2:" . HMAC(subkey(ip), "YYYY-MM-DD|" . truncated_ip). ללא privacyKey → v1.
+	 */
+	public function ip_hash( $ip ) {
+		if ( 2 !== $this->hash_version() ) {
+			return hash( 'sha256', $ip . $this->daily_salt() );
+		}
+		return 'v2:' . hash_hmac( 'sha256', gmdate( 'Y-m-d' ) . '|' . self::truncate_ip( $ip ), $this->privacy_subkey( 'ip' ) );
+	}
+
+	public function ua_hash( $ua ) {
+		if ( 2 !== $this->hash_version() ) {
+			return hash( 'sha256', $ua . $this->daily_salt() );
+		}
+		return 'v2:' . hash_hmac( 'sha256', gmdate( 'Y-m-d' ) . '|' . $ua, $this->privacy_subkey( 'ua' ) );
+	}
+
+	/**
+	 * customerHash v2 = "v2:" . HMAC(subkey(customer), lower(trim(email))). יציב לאורך זמן (ללא תאריך).
+	 */
+	public function customer_hash( $email ) {
+		$email = strtolower( trim( (string) $email ) );
+		if ( '' === $email ) {
+			return '';
+		}
+		if ( 2 !== $this->hash_version() ) {
+			return hash( 'sha256', $email . $this->site_pepper() );
+		}
+		return 'v2:' . hash_hmac( 'sha256', $email, $this->privacy_subkey( 'customer' ) );
+	}
+
+	/**
+	 * שדות נוספים ל-heartbeat: מבקש privacyKey אם אין עדיין.
+	 */
+	public function heartbeat_extra() {
+		return '' === $this->privacy_key() ? array( 'needsPrivacyKey' => true ) : array();
+	}
+
+	/**
+	 * שומר privacyKey שהתקבל בתשובת heartbeat (רק בפורמט hex תקין).
+	 */
+	public function store_privacy_key_from( $result ) {
+		if ( ! empty( $result['ok'] ) && is_array( $result['body'] ) && ! empty( $result['body']['privacyKey'] ) ) {
+			$key = (string) $result['body']['privacyKey'];
+			if ( preg_match( '/^[0-9a-f]{64}$/', $key ) ) {
+				update_option( self::PRIVACY_OPTION, $key, false );
+			}
+		}
+	}
+
+	/**
+	 * heartbeat מלא + קליטת privacyKey. משמש cron / בדיקת חיבור / שמירת צימוד.
+	 */
+	public function send_heartbeat( $orders_since = 0 ) {
+		$result = $this->post(
+			'/api/plugin/heartbeat',
+			array_merge(
+				array(
+					'pluginVersion'     => BRIDGEAD_VERSION,
+					'wooVersion'        => defined( 'WC_VERSION' ) ? WC_VERSION : 'unknown',
+					'wpVersion'         => get_bloginfo( 'version' ),
+					'phpVersion'        => PHP_VERSION,
+					'ordersSinceLast'   => (int) $orders_since,
+					'stuckWebhookQueue' => Bridgead_Queue::size(),
+					'sentAt'            => gmdate( 'c' ),
+				),
+				$this->heartbeat_extra()
+			)
+		);
+		$this->store_privacy_key_from( $result );
+		return $result;
+	}
+
 	/**
 	 * מלח יומי ל-dedup של IP/UA — תואם לצד השרת (`siteId + YYYY-MM-DD`).
 	 */

@@ -60,7 +60,8 @@ class Bridgead_Settings {
 		}
 		check_admin_referer( self::NONCE );
 
-		$settings = get_option( 'bridgead_settings', array() );
+		$settings    = get_option( 'bridgead_settings', array() );
+		$old_site_id = isset( $settings['site_id'] ) ? $settings['site_id'] : '';
 
 		if ( isset( $_POST['bridgead_pairing'] ) ) {
 			$raw = trim( sanitize_text_field( wp_unslash( $_POST['bridgead_pairing'] ) ) );
@@ -83,6 +84,14 @@ class Bridgead_Settings {
 
 		update_option( 'bridgead_settings', $settings );
 
+		// SEC-P-13: חנות אחרת → מפתח פרטיות אחר. מנקים, ומבקשים מהשרת מפתח לצימוד החדש.
+		if ( $old_site_id !== $settings['site_id'] ) {
+			delete_option( Bridgead_Api::PRIVACY_OPTION );
+		}
+		if ( Bridgead_Api::instance()->is_configured() && '' === Bridgead_Api::instance()->privacy_key() ) {
+			Bridgead_Api::instance()->send_heartbeat( 0 );
+		}
+
 		wp_safe_redirect( add_query_arg( array( 'page' => self::SLUG, 'saved' => '1' ), admin_url( 'admin.php' ) ) );
 		exit;
 	}
@@ -100,18 +109,7 @@ class Bridgead_Settings {
 			wp_send_json_error( array( 'message' => __( 'לא הוזן קוד צימוד.', 'bridgead-woo' ) ) );
 		}
 
-		$result = Bridgead_Api::instance()->post(
-			'/api/plugin/heartbeat',
-			array(
-				'pluginVersion'     => BRIDGEAD_VERSION,
-				'wooVersion'        => defined( 'WC_VERSION' ) ? WC_VERSION : 'unknown',
-				'wpVersion'         => get_bloginfo( 'version' ),
-				'phpVersion'        => PHP_VERSION,
-				'ordersSinceLast'   => 0,
-				'stuckWebhookQueue' => Bridgead_Queue::size(),
-				'sentAt'            => gmdate( 'c' ),
-			)
-		);
+		$result = Bridgead_Api::instance()->send_heartbeat( 0 );
 
 		if ( ! $result['ok'] ) {
 			wp_send_json_error( array( 'message' => $result['error'] ) );
@@ -121,7 +119,9 @@ class Bridgead_Settings {
 		$settings['last_verified_at'] = time();
 		update_option( 'bridgead_settings', $settings );
 
-		wp_send_json_success( $result['body'] );
+		$body = is_array( $result['body'] ) ? $result['body'] : array();
+		unset( $body['privacyKey'] ); // לעולם לא נחשף ל-JS של מסך ההגדרות.
+		wp_send_json_success( $body );
 	}
 
 	public function render() {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateTrackRequest } from "@/lib/track/auth";
-import { orderPayloadSchema } from "@/lib/track/schemas";
+import { orderPayloadSchema, validateOrderHashes } from "@/lib/track/schemas";
 import { ingestOrder } from "@/lib/track/ingest";
 import { accepted, badRequest, fromThrown, ok, parseJsonBody } from "@/lib/track/http";
 
@@ -11,6 +11,9 @@ export async function POST(request: Request) {
 
   const parsed = orderPayloadSchema.safeParse(parseJsonBody(auth.rawBody));
   if (!parsed.success) return badRequest(parsed.error);
+
+  const hashError = validateOrderHashes(parsed.data);
+  if (hashError) return NextResponse.json({ error: hashError }, { status: 422 });
 
   try {
     const res = await ingestOrder(auth.site, parsed.data);

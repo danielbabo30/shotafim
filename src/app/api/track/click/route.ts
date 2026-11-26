@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateTrackRequest } from "@/lib/track/auth";
-import { clickPayloadSchema } from "@/lib/track/schemas";
+import { clickPayloadSchema, validateClickHashes } from "@/lib/track/schemas";
 import { recordClick } from "@/lib/track/ingest";
 import { accepted, badRequest, fromThrown, parseJsonBody } from "@/lib/track/http";
 
@@ -11,6 +11,9 @@ export async function POST(request: Request) {
 
   const parsed = clickPayloadSchema.safeParse(parseJsonBody(auth.rawBody));
   if (!parsed.success) return badRequest(parsed.error);
+
+  const hashError = validateClickHashes(parsed.data);
+  if (hashError) return NextResponse.json({ error: hashError }, { status: 422 });
 
   try {
     const res = await recordClick(auth.site, parsed.data);

@@ -66,18 +66,7 @@ class Bridgead_Cron {
 
 		$since = (int) get_option( 'bridgead_last_heartbeat', 0 );
 
-		$result = $api->post(
-			'/api/plugin/heartbeat',
-			array(
-				'pluginVersion'    => BRIDGEAD_VERSION,
-				'wooVersion'       => defined( 'WC_VERSION' ) ? WC_VERSION : 'unknown',
-				'wpVersion'        => get_bloginfo( 'version' ),
-				'phpVersion'       => PHP_VERSION,
-				'ordersSinceLast'  => $this->orders_since( $since ),
-				'stuckWebhookQueue' => Bridgead_Queue::size(),
-				'sentAt'           => gmdate( 'c' ),
-			)
-		);
+		$result = $api->send_heartbeat( $this->orders_since( $since ) );
 
 		if ( $result['ok'] ) {
 			update_option( 'bridgead_last_heartbeat', time(), false );

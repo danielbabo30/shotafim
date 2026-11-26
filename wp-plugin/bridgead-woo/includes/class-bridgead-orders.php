@@ -51,9 +51,13 @@ class Bridgead_Orders {
 			),
 			'lineItems'       => $this->line_items( $order ),
 			'couponCodes'     => array_values( array_map( 'strtoupper', $order->get_coupon_codes() ) ),
-			'customerHash'    => '' === $email ? '' : hash( 'sha256', $email . Bridgead_Api::instance()->site_pepper() ),
+			'customerHash'    => Bridgead_Api::instance()->customer_hash( $email ),
 			'isNewCustomer'   => $this->is_new_customer( $email, $order->get_id() ),
 		);
+
+		if ( 2 === Bridgead_Api::instance()->hash_version() && '' !== $payload['customerHash'] ) {
+			$payload['hashVersion'] = 2;
+		}
 
 		$ref = (string) $order->get_meta( '_bridgead_ref' );
 		if ( '' !== $ref ) {

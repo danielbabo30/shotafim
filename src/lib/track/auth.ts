@@ -1,6 +1,7 @@
 import "server-only";
 import type { TrackedSite } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { clientIpFromHeaders, rateLimit } from "@/lib/rate-limit";
 import { HMAC_SKEW_SECONDS } from "@/lib/partner-constants";
 import { decryptApiKey, safeSignatureEqual, sha256Hex, trackSignature } from "@/lib/track/crypto";
 
@@ -16,7 +17,32 @@ import { decryptApiKey, safeSignatureEqual, sha256Hex, trackSignature } from "@/
 export type TrackAuthResult =
   { ok: true; site: TrackedSite; rawBody: string } | { ok: false; status: number; error: string };
 
+/** תקרות גוף בקשה (SEC-P-07): digest עד 2MB, שאר ה-endpoints עד 256KB */
+const MAX_BODY_BYTES = 256 * 1024;
+const MAX_DIGEST_BODY_BYTES = 2 * 1024 * 1024;
+/** מגבלות קצב: לפי IP לפני כל גישה ל-DB, ולפי אתר אחרי אימות (בקשות/דקה) */
+const IP_LIMIT_PER_MIN = 300;
+const SITE_LIMIT_PER_MIN = 1200;
+
 export async function authenticateTrackRequest(request: Request): Promise<TrackAuthResult> {
+  // rate limit לפי IP — לפני כל עבודה (SEC-P-07). ראו src/lib/rate-limit.ts (in-memory).
+  const ipRes = await rateLimit(
+    `track|${clientIpFromHeaders(request.headers)}`,
+    IP_LIMIT_PER_MIN,
+    60,
+  );
+  if (!ipRes.ok) {
+    return { ok: false, status: 429, error: "יותר מדי בקשות." };
+  }
+
+  const maxBytes = new URL(request.url).pathname.endsWith("/digest")
+    ? MAX_DIGEST_BODY_BYTES
+    : MAX_BODY_BYTES;
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return { ok: false, status: 413, error: "גוף הבקשה גדול מדי." };
+  }
+
   const siteId = request.headers.get("x-bridgead-site");
   const timestamp = request.headers.get("x-bridgead-timestamp");
   const signature = request.headers.get("x-bridgead-signature");
@@ -31,6 +57,9 @@ export async function authenticateTrackRequest(request: Request): Promise<TrackA
   }
 
   const rawBody = await request.text();
+  if (rawBody.length > maxBytes) {
+    return { ok: false, status: 413, error: "גוף הבקשה גדול מדי." };
+  }
 
   const site = await prisma.trackedSite.findUnique({ where: { id: siteId } });
   if (!site || site.status === "DEACTIVATED") {
@@ -52,6 +81,12 @@ export async function authenticateTrackRequest(request: Request): Promise<TrackA
   const expected = trackSignature(apiKey, timestamp, rawBody);
   if (!safeSignatureEqual(expected, signature)) {
     return { ok: false, status: 401, error: "חתימת HMAC לא תקינה." };
+  }
+
+  // throttle לפי אתר — רק אחרי חתימה תקפה (כדי ש-siteId ידוע לא ישמש לשריפת המכסה)
+  const siteRes = await rateLimit(`track-site|${site.id}`, SITE_LIMIT_PER_MIN, 60);
+  if (!siteRes.ok) {
+    return { ok: false, status: 429, error: "יותר מדי בקשות מהאתר." };
   }
 
   // אימות דומיין: ה-Origin/Referer (אם קיים) חייב להתאים ל-host הרשום
