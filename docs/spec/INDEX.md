@@ -32,7 +32,7 @@
 | 22 | Public index / explore | `public-index.md` | missing | — | frontend-marketing |
 
 ## Completed specs
-_(none yet — systems-analyst will fill this in)_
+- [`privacy-hashing.md`](privacy-hashing.md) — hash v2 לזיהויי IP/UA/לקוח בתוסף (SEC-P-13)
 
 ## QA
 Test scenarios: [`qa/INDEX.md`](qa/INDEX.md) · Regression: [`qa/regression.md`](qa/regression.md)
