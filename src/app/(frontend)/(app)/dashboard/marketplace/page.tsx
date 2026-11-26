@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
 import { getMarketplaceCreators } from "@/lib/marketplace-query";
 import { listBrandOpenCampaigns } from "@/lib/campaigns";
@@ -10,18 +10,7 @@ export const metadata: Metadata = { title: "מרקטפלייס יוצרים" };
 export default async function MarketplacePage() {
   const user = await requireActiveUser();
 
-  if (user.activeRole !== "brand") {
-    return (
-      <div className="flex flex-col gap-6">
-        <h1 className="font-display text-on-surface text-2xl font-bold sm:text-3xl">
-          מרקטפלייס יוצרים
-        </h1>
-        <div className="border-outline-variant bg-surface-lowest text-on-surface-variant rounded-xl border p-8 text-sm leading-relaxed">
-          החיבור ליוצרים ומשפיענים זמין בכובע «מפרסם». החליפו למצב מפרסם מהסרגל העליון.
-        </div>
-      </div>
-    );
-  }
+  requireRole(user, ["brand"]);
 
   const [creators, categories, openCampaigns] = await Promise.all([
     getMarketplaceCreators(),

@@ -199,7 +199,6 @@ export const getSpaceDashboardData = cache(
       prisma.contract.findMany({
         where: { providerId: spaceUserId, adSpaceAssetId: { not: null } },
         orderBy: { updatedAt: "desc" },
-        take: 12,
         select: {
           id: true,
           status: true,
@@ -253,7 +252,10 @@ export const getSpaceDashboardData = cache(
       const proofVerified = c.proofs.some((p) => p.verifiedByBrand);
       const proofUploaded = c.proofs.length > 0;
       const started = c.bookings.some((b) => b.startDate <= now);
-      const isLive = c.bookings.some((b) => b.status === "BROADCASTING");
+      // "משדר עכשיו" רק בתוך חלון השיבוץ בפועל — סטטוס לבדו לא מספיק (שיבוץ שעבר זמנו)
+      const isLive = c.bookings.some(
+        (b) => b.status === "BROADCASTING" && b.startDate <= now && b.endDate >= now,
+      );
 
       let state: BroadcastState;
       if (escrowStatus === "RELEASED_TO_PROVIDER" || c.status === "APPROVED") {
@@ -299,7 +301,9 @@ export const getSpaceDashboardData = cache(
     for (const b of monthBookings) {
       const from = Math.max(
         1,
-        b.startDate.getMonth() === now.getMonth() ? b.startDate.getDate() : 1,
+        b.startDate.getMonth() === now.getMonth() && b.startDate.getFullYear() === now.getFullYear()
+          ? b.startDate.getDate()
+          : 1,
       );
       const to =
         b.endDate.getMonth() === now.getMonth() && b.endDate.getFullYear() === now.getFullYear()
@@ -318,7 +322,8 @@ export const getSpaceDashboardData = cache(
         if (
           b.endDate >= monthStart &&
           b.endDate < monthEnd &&
-          b.endDate.getMonth() === now.getMonth()
+          b.endDate.getMonth() === now.getMonth() &&
+          b.endDate.getFullYear() === now.getFullYear()
         ) {
           flagDays.add(b.endDate.getDate());
         }

@@ -77,7 +77,7 @@ export const DEFAULT_FOOTER_TAGLINE =
   "המרקטפלייס הבטוח והמתקדם ביותר לחיבור בין מותגים ליוצרי תוכן ושטחי פרסום דיגיטליים.";
 
 export const DEFAULT_NEWSLETTER: NonNullable<SiteSetting["newsletter"]> = {
-  enabled: true,
+  enabled: false,
   heading: "הצטרפו לניוזלטר",
   text: "עדכונים חודשיים על הזדמנויות וקמפיינים חדשים.",
   placeholder: "אימייל עסקי",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { getAdSpacesData, MEDIA_TYPE_LABELS, PRICING_UNIT_LABELS } from "@/lib/ad-spaces";
 import { AdSpaceExplorer } from "@/components/app/ad-spaces/ad-space-explorer";
@@ -16,6 +16,7 @@ function shortShekels(n: number): string {
 
 export default async function AdSpacesPage() {
   const user = await requireActiveUser();
+  requireRole(user, ["brand"]);
   const data = await getAdSpacesData(user.id);
 
   const listings: AdSpaceCardVM[] = data.listings.map((l) => ({
@@ -27,6 +28,7 @@ export default async function AdSpacesPage() {
     location: l.location,
     city: l.city,
     isLive: l.isLive,
+    image: l.image,
     specs: l.specs,
     availability: l.availability,
     bookedUntil: l.bookedUntil,

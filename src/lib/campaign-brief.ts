@@ -97,6 +97,32 @@ export const campaignFormSchema = z
     }
     if (v.endDate && Number.isNaN(Date.parse(v.endDate))) {
       ctx.addIssue({ code: "custom", path: ["endDate"], message: "תאריך לא תקין" });
+    } else if (v.endDate && v.intent === "publish") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(v.endDate).getTime() < today.getTime()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["endDate"],
+          message: "תאריך הסיום לא יכול להיות בעבר",
+        });
+      }
+    }
+    // "משולב" (HYBRID) מסומן "יתווסף בהמשך" — לא ניתן לשמירה עדיין
+    if (v.compensationModel === "HYBRID") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["compensationModel"],
+        message: "מודל תגמול משולב עדיין לא זמין — בחרו תשלום קבוע או תשלום פר רכישה",
+      });
+    }
+    // בריף שטחי פרסום בלבד לא מקבל תוצרי יוצר
+    if (v.targetType === "AD_SPACE" && v.deliverables.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["deliverables"],
+        message: "בריף לשטחי פרסום אינו כולל תוצרי יוצר — הסירו את התוצרים או בחרו סוג אחר",
+      });
     }
     if (v.intent === "publish") {
       if (v.description.length < 20) {
@@ -106,7 +132,7 @@ export const campaignFormSchema = z
           message: "לפני פרסום צריך תיאור מפורט יותר (לפחות 20 תווים)",
         });
       }
-      if (v.deliverables.length === 0) {
+      if (v.deliverables.length === 0 && v.targetType !== "AD_SPACE") {
         ctx.addIssue({
           code: "custom",
           path: ["deliverables"],

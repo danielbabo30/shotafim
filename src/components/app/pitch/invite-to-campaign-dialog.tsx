@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useId, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/marketing/icons";
@@ -28,6 +28,7 @@ export function InviteToCampaignDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [state, formAction, pending] = useActionState(inviteToCampaign, null);
+  const campaignSelectId = `${useId()}-campaign`;
 
   if (openCampaigns.length === 0) {
     return (
@@ -74,13 +75,13 @@ export function InviteToCampaignDialog({
 
           <div>
             <label
-              htmlFor="invite-campaign"
+              htmlFor={campaignSelectId}
               className="text-on-surface mb-1 block text-sm font-semibold"
             >
               בחרו בריף פתוח
             </label>
             <select
-              id="invite-campaign"
+              id={campaignSelectId}
               name="campaignId"
               required
               className={field}

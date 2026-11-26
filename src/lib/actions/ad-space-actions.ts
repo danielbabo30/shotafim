@@ -52,7 +52,8 @@ function readForm(formData: FormData) {
       .map(String)
       .map((s) => s.trim())
       .filter(Boolean),
-    categories: formData.getAll("categories").map(String).filter(Boolean),
+    // כפילויות (POST ידני) מנוקות — אחרת unique על (נכס, קטגוריה) נכשל
+    categories: [...new Set(formData.getAll("categories").map(String).filter(Boolean))],
   };
 }
 
@@ -216,6 +217,7 @@ export async function toggleAdSpaceActive(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/dashboard/assets");
+  revalidatePath(`/dashboard/assets/${assetId}/edit`);
   revalidatePath("/dashboard/bookings");
   // redirect לאותו עמוד — מבטיח רינדור מחדש של המצב (form action בלי redirect לא תמיד מרענן)
   redirect(`/dashboard/assets/${assetId}/edit`);
@@ -251,9 +253,9 @@ export async function deleteAdSpaceAsset(formData: FormData): Promise<void> {
   if (!existing) return;
 
   if (existing._count.bookings > 0) {
-    // יש שריון פעיל — לא מוחקים, רק מסתירים מהקטלוג
-    await prisma.adSpaceAsset.update({ where: { id: assetId }, data: { isActive: false } });
-    revalidatePath("/dashboard/assets");
+    // יש שריון פעיל — חוסמים את הארכוב, בלי לשנות את מצב הנכס בלי הסכמה.
+    // (בעל השטח יכול להשבית את הנכס ידנית דרך מתג ההפעלה.)
+    revalidatePath(`/dashboard/assets/${assetId}/edit`);
     redirect(`/dashboard/assets/${assetId}/edit?blocked=bookings`);
   }
 

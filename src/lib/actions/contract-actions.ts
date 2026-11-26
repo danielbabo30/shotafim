@@ -1,12 +1,21 @@
 "use server";
 
 import { createHash } from "node:crypto";
+import { isRateLimited } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
 import { Prisma, type MediaFileType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/app-user";
 import { storage } from "@/lib/storage";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, isAllowedUploadMime } from "@/lib/deliverable-upload";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_MB,
+  bytesMatchMime,
+  isAllowedUploadMime,
+} from "@/lib/deliverable-upload";
+
+const MAX_NOTES_LENGTH = 2000;
+const MAX_ROOM_MESSAGE_LENGTH = 4000;
 import { getValidCityIds } from "@/lib/cities";
 import type { ContractActionState, ContractParty } from "@/lib/contract-room";
 
@@ -124,8 +133,16 @@ export async function submitDeliverable(
   }
   const { user, contract } = loaded;
 
+  // SEC-A-03: מגבלת העלאות לפי משתמש
+  if (await isRateLimited("deliverable:upload", 20, 600, user.id)) {
+    return { status: "error", message: "יותר מדי העלאות בזמן קצר. נסו שוב בעוד מספר דקות." };
+  }
+
   if (contract.status !== "ACTIVE") {
     return { status: "error", message: "אפשר להעלות תוצר רק כשהחוזה בעבודה." };
+  }
+  if (notes.length > MAX_NOTES_LENGTH) {
+    return { status: "error", message: `ההערות ארוכות מדי (עד ${MAX_NOTES_LENGTH} תווים).` };
   }
   if (!hasFile && (!fileUrl || !isUrl(fileUrl))) {
     return { status: "error", message: "צרפו קובץ או הזינו קישור תקין (מתחיל ב-http)." };
@@ -144,6 +161,9 @@ export async function submitDeliverable(
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
+    if (!bytesMatchMime(bytes, file.type)) {
+      return { status: "error", message: "תוכן הקובץ אינו תואם לסוג שלו — העלו קובץ תקין." };
+    }
     const checksum = createHash("sha256").update(bytes).digest("hex");
 
     const attachment = await prisma.mediaAttachment.create({
@@ -329,7 +349,7 @@ export async function addFeedback(formData: FormData): Promise<void> {
       ? Math.max(0, Math.floor(Number(rawTs)))
       : null;
 
-  if (!feedbackText) return;
+  if (!feedbackText || feedbackText.length > MAX_NOTES_LENGTH) return;
 
   const owned = await loadOwnedContract(contractId);
   if (!owned) return;
@@ -393,6 +413,17 @@ export async function updateContractShipping(
   if (!contract.campaign.hasPhysicalProduct) {
     return { status: "error", message: "לקמפיין זה אין מוצר פיזי לשליחה." };
   }
+  if (contract.status === "APPROVED" || contract.status === "REFUNDED") {
+    return { status: "error", message: "החוזה הסתיים — אי אפשר לעדכן פרטי משלוח." };
+  }
+  if (
+    recipientName.length > 120 ||
+    phone.length > 30 ||
+    address.length > 300 ||
+    notes.length > 1000
+  ) {
+    return { status: "error", message: "אחד השדות ארוך מדי." };
+  }
   if (recipientName.length < 2 || address.length < 5 || phone.length < 6) {
     return { status: "error", message: "יש למלא שם מקבל, טלפון וכתובת מלאה." };
   }
@@ -425,11 +456,18 @@ export async function sendRoomMessage(
   const contractId = String(formData.get("contractId") ?? "");
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return { status: "error", message: "" };
+  if (body.length > MAX_ROOM_MESSAGE_LENGTH) {
+    return { status: "error", message: `ההודעה ארוכה מדי (עד ${MAX_ROOM_MESSAGE_LENGTH} תווים).` };
+  }
 
   const loaded = await loadContractParty(contractId);
   if (!loaded) return { status: "error", message: "החוזה לא נמצא או אינו שייך לחשבון זה." };
 
   const { user, contract } = loaded;
+
+  if (await isRateLimited("room:message", 40, 60, user.id)) {
+    return { status: "error", message: "שולחים הודעות מהר מדי. נסו שוב בעוד רגע." };
+  }
 
   let conversationId = contract.conversations[0]?.id;
   if (!conversationId) {

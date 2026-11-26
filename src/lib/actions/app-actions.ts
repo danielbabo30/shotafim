@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
+import { getActiveSessionUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { ROLE_META, userRoleFromKey, roleKeyFromUserRole, type RoleKey } from "@/lib/app-nav";
 
@@ -12,21 +13,21 @@ const isRoleKey = (value: unknown): value is RoleKey =>
 
 /** החלפת התפקיד ("כובע") הפעיל שה-UI מציג. מאמת שהתפקיד באמת שייך למשתמש. */
 export async function setActiveRole(formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = await getActiveSessionUserId();
+  if (!userId) throw new Error("Unauthorized");
 
   const key = formData.get("role");
   if (!isRoleKey(key)) throw new Error("Invalid role");
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: { roles: true },
   });
   const ownedKeys = (dbUser?.roles ?? []).map(roleKeyFromUserRole);
   if (!ownedKeys.includes(key)) throw new Error("Role not owned by user");
 
   await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: userId },
     data: { activeRole: userRoleFromKey(key) },
   });
 

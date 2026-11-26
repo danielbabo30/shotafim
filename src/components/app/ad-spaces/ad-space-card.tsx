@@ -29,6 +29,7 @@ export type AdSpaceCardVM = {
   location: string | null;
   city: string | null;
   isLive: boolean;
+  image: string | null;
   specs: { kind: AdSpaceSpecKind; value: string }[];
   availability: "immediate" | "booked";
   bookedUntil: string | null;
@@ -85,7 +86,17 @@ export function AdSpaceCard({
     >
       {/* מדיה */}
       <div className="bg-surface-high relative grid h-40 shrink-0 place-items-center sm:h-auto sm:w-2/5">
-        <MediaIcon className="text-primary/70 size-14" />
+        {listing.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={listing.image}
+            alt={listing.title}
+            loading="lazy"
+            className="absolute inset-0 size-full object-cover"
+          />
+        ) : (
+          <MediaIcon className="text-primary/70 size-14" />
+        )}
         <span
           className={cn(
             "absolute start-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",

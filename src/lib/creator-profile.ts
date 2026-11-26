@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { DeliverableType, ReviewSentiment, SocialPlatform } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/app-user";
+import { effectiveReliabilityScore } from "@/lib/reliability";
 
 /**
  * שכבת קריאה לפרופיל יוצר בודד (עמוד /dashboard/marketplace/[id]).
@@ -49,7 +50,8 @@ export type CreatorProfileDetail = {
   verified: boolean;
   avatarUrl: string | null;
   coverImageUrl: string | null;
-  reliabilityScore: number;
+  /** null = אין עדיין היסטוריה */
+  reliabilityScore: number | null;
   categorySlugs: string[];
   channels: CreatorChannelView[];
   packages: CreatorPackageView[];
@@ -124,6 +126,10 @@ export const getCreatorProfile = cache(async (id: string): Promise<CreatorProfil
   if (!c) return null;
 
   const ratings = c.user.receivedReviews.map((r) => r.rating);
+  const [approvedContracts, refundedContracts] = await Promise.all([
+    prisma.contract.count({ where: { providerId: c.userId, status: "APPROVED" } }),
+    prisma.contract.count({ where: { providerId: c.userId, status: "REFUNDED" } }),
+  ]);
 
   return {
     id: c.id,
@@ -134,7 +140,11 @@ export const getCreatorProfile = cache(async (id: string): Promise<CreatorProfil
     verified: c.verificationStatus === "VERIFIED",
     avatarUrl: c.avatarUrl,
     coverImageUrl: c.coverImageUrl,
-    reliabilityScore: Math.round(c.reliabilityScore),
+    reliabilityScore: effectiveReliabilityScore(
+      c.reliabilityScore,
+      approvedContracts,
+      refundedContracts,
+    ),
     categorySlugs: c.categories.map((x) => x.categorySlug),
     channels: c.channels.map((ch) => ({
       platform: ch.platform,

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { notFound } from "next/navigation";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getBusinessDetail } from "@/lib/business-directory";
 import { getPartnerCategoryLabels } from "@/lib/partner-categories-query";
 import { getCities } from "@/lib/cities";
@@ -57,9 +57,7 @@ export default async function BusinessDetailPage({
   const { businessId } = await params;
 
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("creator") && !user.roleKeys.includes("space")) {
-    redirect("/dashboard");
-  }
+  requireRole(user, ["creator", "space"]);
 
   const [detail, categoryLabels, cities] = await Promise.all([
     getBusinessDetail(businessId),

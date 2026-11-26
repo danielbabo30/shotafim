@@ -201,7 +201,7 @@ export const getMessagesData = cache(async (userId: string): Promise<MessagesDat
     return {
       id: conv.id,
       name: other ? displayNameOf(other) : "משתמש BridgeAd",
-      handle: other?.creatorProfile?.channels[0]?.handle,
+      handle: other?.creatorProfile?.channels[0]?.handle?.replace(/^@+/, ""),
       avatarUrl: other?.image ?? undefined,
       context,
       preview: lastMessage?.body ?? "אין הודעות עדיין",

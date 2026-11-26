@@ -13,7 +13,12 @@ const field =
 const labelCls = "text-on-surface mb-1 block text-sm font-semibold";
 const errCls = "text-error mt-1 text-xs";
 
-export type PitchPrefillProp = { price: number; days: number } | null;
+export type PitchPrefillProp = {
+  price: number;
+  days: number;
+  /** נכס שנבחר מראש (בקשת שריון) */
+  assetId?: string | null;
+} | null;
 
 /** טופס הגשת הצעה לבריף (יוצר / בעל שטחים) */
 export function ApplyForm({
@@ -66,7 +71,11 @@ export function ApplyForm({
             id="offer"
             name={offerName}
             className={field}
-            defaultValue=""
+            defaultValue={
+              prefill?.assetId && offers.some((o) => o.id === prefill.assetId)
+                ? prefill.assetId
+                : ""
+            }
             onChange={(e) => {
               const o = offers.find((x) => x.id === e.target.value);
               if (o) {

@@ -60,6 +60,8 @@ export type AdSpaceListing = {
   city: string | null;
   /** משדר תוכן חי כרגע (מסכים דיגיטליים) */
   isLive: boolean;
+  /** תמונה ראשית (קישור) — null אם לא הוזנה */
+  image: string | null;
   specs: AdSpaceSpec[];
   availability: AdSpaceAvailability;
   /** תאריך שחרור מפורמט — רק כש-availability === "booked" */
@@ -197,6 +199,7 @@ export const getAdSpacesData = cache(async (brandUserId: string): Promise<AdSpac
       estimatedReach: true,
       pricingModel: true,
       basePriceILS: true,
+      images: true,
       owner: { select: { companyName: true } },
       city: { select: { nameHe: true, district: true } },
       categories: { select: { categorySlug: true } },
@@ -232,7 +235,10 @@ export const getAdSpacesData = cache(async (brandUserId: string): Promise<AdSpac
         ? [a.city.nameHe, a.address].filter(Boolean).join(", ")
         : (a.address ?? null),
       city: a.city?.nameHe ?? null,
-      isLive: a.bookings.some((b) => b.status === "BROADCASTING"),
+      image: a.images[0] ?? null,
+      isLive: a.bookings.some(
+        (b) => b.status === "BROADCASTING" && b.startDate <= now && b.endDate >= now,
+      ),
       specs,
       availability: isBooked ? "booked" : "immediate",
       bookedUntil: isBooked && activeBooking ? heDate(activeBooking.endDate) : null,
@@ -310,6 +316,7 @@ export type AdSpaceDetail = {
   categorySlugs: string[];
   availability: AdSpaceAvailability;
   isLive: boolean;
+  images: string[];
   bookings: AdSpaceBookingView[];
 };
 
@@ -336,6 +343,7 @@ export const getAdSpaceDetail = cache(async (id: string): Promise<AdSpaceDetail 
       pricingModel: true,
       basePriceILS: true,
       proofRequirement: true,
+      images: true,
       owner: { select: { companyName: true, verificationStatus: true } },
       city: { select: { nameHe: true } },
       categories: { select: { categorySlug: true } },
@@ -373,7 +381,10 @@ export const getAdSpaceDetail = cache(async (id: string): Promise<AdSpaceDetail 
     proofRequirementLabel: PROOF_REQUIREMENT_LABELS[a.proofRequirement],
     categorySlugs: a.categories.map((c) => c.categorySlug),
     availability: isBooked ? "booked" : "immediate",
-    isLive: upcoming.some((b) => b.status === "BROADCASTING"),
+    images: a.images,
+    isLive: upcoming.some(
+      (b) => b.status === "BROADCASTING" && b.startDate <= now && b.endDate >= now,
+    ),
     bookings: upcoming.map((b) => ({
       startDate: b.startDate,
       endDate: b.endDate,

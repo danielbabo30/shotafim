@@ -1,9 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isRateLimited } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import { requireActiveUser } from "@/lib/app-user";
 import { prisma } from "@/lib/prisma";
+import { withActionError } from "@/lib/action-errors";
+
+const MAX_MESSAGE_LENGTH = 4000;
 
 export type SendMessageResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -24,7 +28,15 @@ export async function sendMessage(
 
   const text = body.trim();
   if (!text) return { status: "error", message: "הודעה ריקה." };
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    return { status: "error", message: `ההודעה ארוכה מדי (עד ${MAX_MESSAGE_LENGTH} תווים).` };
+  }
   if (!conversationId) return { status: "error", message: "שיחה לא נמצאה." };
+
+  // SEC-A-03: הגבלת קצב הודעות לפי משתמש
+  if (await isRateLimited("message:send", 40, 60, user.id)) {
+    return { status: "error", message: "שולחים הודעות מהר מדי. נסו שוב בעוד רגע." };
+  }
 
   const participant = await prisma.conversationParticipant.findUnique({
     where: { conversationId_userId: { conversationId, userId: user.id } },
@@ -56,8 +68,13 @@ export async function sendMessage(
 export async function startBusinessConversation(businessUserId: string): Promise<never> {
   const user = await requireActiveUser();
 
+  // SEC-A-03: מניעת ספאם של פתיחת שיחות
+  if (await isRateLimited("conversation:start", 20, 3600, user.id)) {
+    redirect(withActionError("/dashboard/businesses", "conversation-invalid"));
+  }
+
   if (!businessUserId || businessUserId === user.id) {
-    throw new Error("לא ניתן לפתוח שיחה עם משתמש זה.");
+    redirect(withActionError("/dashboard/businesses", "conversation-invalid"));
   }
 
   const business = await prisma.businessProfile.findFirst({
@@ -65,7 +82,7 @@ export async function startBusinessConversation(businessUserId: string): Promise
     select: { userId: true },
   });
   if (!business) {
-    throw new Error("העסק לא נמצא או אינו פעיל.");
+    redirect(withActionError("/dashboard/businesses", "business-not-found"));
   }
 
   const candidates = await prisma.conversation.findMany({
@@ -100,4 +117,25 @@ export async function startBusinessConversation(businessUserId: string): Promise
 
   revalidatePath("/dashboard/messages");
   redirect(`/dashboard/messages?conversation=${conversationId}`);
+}
+
+/**
+ * מסמן כנקראו את ההודעות הנכנסות בשיחה (readAt) — נקרא כשהמשתמש פותח שיחה.
+ * מסונן לשיחות שהמשתמש משתתף בהן; הודעות שנשלחו על-ידיו לא מושפעות.
+ */
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const user = await requireActiveUser();
+  if (!conversationId) return;
+
+  const participant = await prisma.conversationParticipant.findUnique({
+    where: { conversationId_userId: { conversationId, userId: user.id } },
+    select: { conversationId: true },
+  });
+  if (!participant) return;
+
+  const { count } = await prisma.message.updateMany({
+    where: { conversationId, senderId: { not: user.id }, readAt: null },
+    data: { readAt: new Date() },
+  });
+  if (count > 0) revalidatePath("/dashboard/messages");
 }

@@ -65,7 +65,7 @@ export async function CreatorDashboard() {
           icon={<StarIcon className="size-5" />}
           iconTone="warning"
           label="ציון אמינות והשלמה"
-          value={`${kpis.reliabilityScore}%`}
+          value={kpis.reliabilityScore == null ? "—" : `${kpis.reliabilityScore}%`}
           hint="עמידה בזמנים וסיום קמפיינים"
         />
       </div>

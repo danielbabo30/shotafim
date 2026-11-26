@@ -94,11 +94,11 @@ export function BroadcastCard({ item }: { item: BroadcastCardVM }) {
 
           {needsProof ? (
             <Link
-              href="/dashboard/bookings"
+              href={`${contractHref}#proof-of-play`}
               className="bg-primary text-on-primary hover:bg-primary-hover shadow-ambient-sm mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors"
             >
               <UploadFileIcon className="size-4" />
-              העלה תמונת/וידאו הוכחת שידור לשחרור הכסף
+              הוסף הוכחת שידור
             </Link>
           ) : (
             <Link

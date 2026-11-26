@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { resolveDispute, DISPUTE_ACTION_INITIAL } from "@/lib/actions/dispute-actions";
+import { resolveDispute } from "@/lib/actions/dispute-actions";
+import { DISPUTE_ACTION_INITIAL } from "@/lib/dispute-action-state";
 
 const OPTIONS = [
   { value: "RESOLVED_PAYOUT", label: "תשלום לספק — הכסף בנאמנות משוחרר ליוצר/לבעל השטח" },

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { notFound } from "next/navigation";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { prisma } from "@/lib/prisma";
 import { getCities } from "@/lib/cities";
 import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
@@ -26,7 +26,7 @@ export default async function EditAdSpaceAssetPage({
   const { id } = await params;
   const { blocked } = await searchParams;
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("space")) redirect("/dashboard");
+  requireRole(user, ["space"]);
 
   const asset = await prisma.adSpaceAsset.findFirst({
     where: { id, owner: { userId: user.id }, deletedAt: null },

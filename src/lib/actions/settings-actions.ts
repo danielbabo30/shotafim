@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { isRateLimited } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -9,6 +10,8 @@ import { z, type ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { storage } from "@/lib/storage";
 import { requireActiveUser } from "@/lib/app-user";
+import { bytesMatchMime } from "@/lib/deliverable-upload";
+import { decryptOAuthToken } from "@/lib/oauth-crypto";
 import { getValidCityIds } from "@/lib/cities";
 import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
 import type { SettingsFormState } from "@/lib/actions/settings-form-state";
@@ -29,7 +32,35 @@ import {
  * "use server" מותר לו לייצא רק async functions, לא קבועים.
  */
 
+// הודעות ברירת-מחדל של zod בעברית (במקום "Too big…" / "Invalid input…")
+z.config(z.locales.he());
+
 const REVALIDATE_PATH = "/dashboard/settings";
+
+/** ערך שדה מ-FormData כמחרוזת — שדה חסר (null) הופך ל-"" ולא ל"expected string, received null" */
+function fv(formData: FormData, key: string): string {
+  const v = formData.get(key);
+  return typeof v === "string" ? v : "";
+}
+
+/** טלפון: ספרות, רווחים, +, -, סוגריים בלבד; 7–20 תווים */
+const phoneNumber = z
+  .string()
+  .trim()
+  .regex(/^[0-9+\-\s()]{7,20}$/, "מספר טלפון לא תקין");
+
+/** כתובת http(s) בלבד (חוסם javascript: וסכמות אחרות) */
+const httpUrl = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, "הכתובת ארוכה מדי")
+    .refine(
+      (v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v),
+      "הכתובת חייבת להתחיל ב-http:// או https://",
+    )
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null));
 
 function fieldErrorsFrom(err: ZodError): Record<string, string> {
   const out: Record<string, string> = {};
@@ -40,23 +71,23 @@ function fieldErrorsFrom(err: ZodError): Record<string, string> {
   return out;
 }
 
-const P2002_MESSAGES: Record<string, string> = {
-  phone: "מספר הטלפון כבר רשום למשתמש אחר במערכת",
-};
-
-function p2002Message(e: Prisma.PrismaClientKnownRequestError, fallback: string): string {
-  const target = Array.isArray(e.meta?.target)
-    ? (e.meta.target as string[]).join(",")
-    : String(e.meta?.target ?? "");
-  const t = target.toLowerCase();
-  const key = Object.keys(P2002_MESSAGES).find((k) => t.includes(k.toLowerCase()));
-  return key ? P2002_MESSAGES[key] : fallback;
-}
+/** SEC-A-14: הודעה אחידה — לא חושפת איזה נתון כבר קיים במערכת. */
+const DUPLICATE_MESSAGE = "לא ניתן לשמור את הפרט הזה. אם הוא שלך — פנו לתמיכה.";
 
 const bankSchema = z.object({
   bank: z.string().trim().max(120).optional().default(""),
-  branch: z.string().trim().max(60).optional().default(""),
-  account: z.string().trim().max(60).optional().default(""),
+  branch: z
+    .string()
+    .trim()
+    .regex(/^(\d{1,4})?$/, "מספר סניף: 1–4 ספרות")
+    .optional()
+    .default(""),
+  account: z
+    .string()
+    .trim()
+    .regex(/^([\d-]{4,20})?$/, "מספר חשבון: 4–20 ספרות")
+    .optional()
+    .default(""),
   accountHolder: z.string().trim().max(120).optional().default(""),
 });
 
@@ -74,8 +105,8 @@ const accountSchema = z.object({
   phone: z
     .string()
     .trim()
-    .max(20)
     .optional()
+    .refine((v) => !v || /^[0-9+\-\s()]{7,20}$/.test(v), "מספר טלפון לא תקין")
     .transform((v) => (v && v.length > 0 ? v : null)),
 });
 
@@ -86,8 +117,8 @@ export async function updateAccountSettings(
   const user = await requireActiveUser();
 
   const parsed = accountSchema.safeParse({
-    name: formData.get("name"),
-    phone: formData.get("phone"),
+    name: fv(formData, "name"),
+    phone: fv(formData, "phone"),
   });
   if (!parsed.success) {
     return {
@@ -104,7 +135,7 @@ export async function updateAccountSettings(
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { status: "error", message: p2002Message(e, "חלק מהפרטים כבר רשומים במערכת.") };
+      return { status: "error", message: DUPLICATE_MESSAGE };
     }
     throw e;
   }
@@ -117,21 +148,11 @@ export async function updateAccountSettings(
 
 const brandSchema = z.object({
   name: z.string().trim().min(1, "שם המותג הוא שדה חובה").max(160),
-  description: z.string().trim().min(1, "תיאור הוא שדה חובה"),
-  websiteUrl: z
-    .string()
-    .trim()
-    .max(300)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
-  logoUrl: z
-    .string()
-    .trim()
-    .max(500)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  description: z.string().trim().min(1, "תיאור הוא שדה חובה").max(2000, "התיאור ארוך מדי"),
+  websiteUrl: httpUrl(300),
+  logoUrl: httpUrl(500),
   contactName: z.string().trim().min(1, "שם איש קשר הוא שדה חובה").max(120),
-  contactPhone: z.string().trim().min(1, "טלפון איש קשר הוא שדה חובה").max(20),
+  contactPhone: phoneNumber,
   billingEmail: z.string().trim().email("אימייל לא תקין"),
   billingAddress: z.string().trim().min(1, "כתובת לחיוב היא שדה חובה").max(300),
   instagram: z.string().trim().max(80).optional().default(""),
@@ -158,17 +179,17 @@ export async function updateBrandSettings(
   }
 
   const parsed = brandSchema.safeParse({
-    name: formData.get("name"),
-    description: formData.get("description"),
-    websiteUrl: formData.get("websiteUrl"),
-    logoUrl: formData.get("logoUrl"),
-    contactName: formData.get("contactName"),
-    contactPhone: formData.get("contactPhone"),
-    billingEmail: formData.get("billingEmail"),
-    billingAddress: formData.get("billingAddress"),
-    instagram: formData.get("instagram"),
-    tiktok: formData.get("tiktok"),
-    facebook: formData.get("facebook"),
+    name: fv(formData, "name"),
+    description: fv(formData, "description"),
+    websiteUrl: fv(formData, "websiteUrl"),
+    logoUrl: fv(formData, "logoUrl"),
+    contactName: fv(formData, "contactName"),
+    contactPhone: fv(formData, "contactPhone"),
+    billingEmail: fv(formData, "billingEmail"),
+    billingAddress: fv(formData, "billingAddress"),
+    instagram: fv(formData, "instagram"),
+    tiktok: fv(formData, "tiktok"),
+    facebook: fv(formData, "facebook"),
     categories: formData.getAll("categories").map(String).filter(Boolean),
   });
   if (!parsed.success) {
@@ -183,7 +204,14 @@ export async function updateBrandSettings(
   const allowedCategories = new Set(
     (await getPartnerCategoriesForScope("BRAND")).map((c) => c.slug),
   );
-  const categories = d.categories.filter((slug) => allowedCategories.has(slug));
+  if (d.categories.length === 0 || d.categories.some((slug) => !allowedCategories.has(slug))) {
+    return {
+      status: "error",
+      message: "יש לבחור קטגוריית פעילות תקינה אחת לפחות.",
+      fieldErrors: { categories: "יש לבחור קטגוריה תקינה" },
+    };
+  }
+  const categories = [...new Set(d.categories)];
 
   const socialLinks: Prisma.InputJsonValue | typeof Prisma.DbNull =
     d.instagram || d.tiktok || d.facebook
@@ -217,7 +245,7 @@ export async function updateBrandSettings(
 
 const creatorSchema = z.object({
   displayName: z.string().trim().min(1, "שם במה הוא שדה חובה").max(120),
-  bio: z.string().trim().min(1, "ביו הוא שדה חובה"),
+  bio: z.string().trim().min(1, "ביו הוא שדה חובה").max(2000, "הביו ארוך מדי"),
   // avatarUrl / coverImageUrl מנוהלים בנפרד דרך uploadCreatorImage (העלאת קובץ), לא כאן.
   primaryCityId: z
     .string()
@@ -252,15 +280,15 @@ export async function updateCreatorSettings(
   }
 
   const parsed = creatorSchema.safeParse({
-    displayName: formData.get("displayName"),
-    bio: formData.get("bio"),
-    primaryCityId: formData.get("primaryCityId"),
-    billingAddress: formData.get("billingAddress"),
+    displayName: fv(formData, "displayName"),
+    bio: fv(formData, "bio"),
+    primaryCityId: fv(formData, "primaryCityId"),
+    billingAddress: fv(formData, "billingAddress"),
     bank: {
-      bank: formData.get("bank.bank"),
-      branch: formData.get("bank.branch"),
-      account: formData.get("bank.account"),
-      accountHolder: formData.get("bank.accountHolder"),
+      bank: fv(formData, "bank.bank"),
+      branch: fv(formData, "bank.branch"),
+      account: fv(formData, "bank.account"),
+      accountHolder: fv(formData, "bank.accountHolder"),
     },
     categories: formData.getAll("categories").map(String).filter(Boolean),
   });
@@ -287,7 +315,14 @@ export async function updateCreatorSettings(
   const allowedCategories = new Set(
     (await getPartnerCategoriesForScope("CREATOR")).map((c) => c.slug),
   );
-  const categories = d.categories.filter((slug) => allowedCategories.has(slug));
+  if (d.categories.length === 0 || d.categories.some((slug) => !allowedCategories.has(slug))) {
+    return {
+      status: "error",
+      message: "יש לבחור תחום תוכן תקין אחד לפחות.",
+      fieldErrors: { categories: "יש לבחור תחום תוכן תקין" },
+    };
+  }
+  const categories = [...new Set(d.categories)];
 
   await prisma.$transaction([
     prisma.creatorCategory.deleteMany({ where: { creatorId: creator.id } }),
@@ -335,6 +370,10 @@ export async function uploadCreatorImage(
     return { status: "error", message: "רק חשבון יוצר יכול לעדכן תמונות." };
   }
 
+  if (await isRateLimited("profile-image:upload", 20, 600, user.id)) {
+    return { status: "error", message: "יותר מדי העלאות בזמן קצר. נסו שוב בעוד מספר דקות." };
+  }
+
   const field = formData.get("field");
   if (field !== "avatar" && field !== "cover") {
     return { status: "error", message: "שדה תמונה לא תקין." };
@@ -355,6 +394,9 @@ export async function uploadCreatorImage(
   const relPath = `${creator.id}/${field}-${randomUUID()}.${ext}`;
   const key = `profile-images/${relPath}`;
   const bytes = Buffer.from(await upload.arrayBuffer());
+  if (!bytesMatchMime(bytes, upload.type)) {
+    return { status: "error", message: "תוכן הקובץ אינו תמונה תקינה מהסוג שנבחר." };
+  }
   await storage.put(key, bytes, upload.type);
 
   const previousUrl = field === "avatar" ? creator.avatarUrl : creator.coverImageUrl;
@@ -406,24 +448,6 @@ const SOCIAL_PLATFORMS: SocialPlatform[] = [
   "LINKEDIN",
 ];
 
-const channelSchema = z.object({
-  // .nullish() (לא .optional()) — formData.get() מחזיר null לשדה שלא קיים בטופס
-  // (הוספת ערוץ חדש, בלי input חבוי channelId), ו-.optional() לבדו דוחה null.
-  channelId: z
-    .string()
-    .trim()
-    .nullish()
-    .transform((v) => (v && v.length > 0 ? v : null)),
-  platform: z.enum(SOCIAL_PLATFORMS as [SocialPlatform, ...SocialPlatform[]], {
-    message: "יש לבחור פלטפורמה",
-  }),
-  handle: z.string().trim().min(1, "שם המשתמש הוא שדה חובה").max(120),
-  channelUrl: z
-    .string()
-    .trim()
-    .regex(/^https?:\/\/.+/, "כתובת הערוץ חייבת להתחיל ב-http(s)://"),
-});
-
 /** מוצא את creatorId של המשתמש המחובר (או null אם אין לו תפקיד/פרופיל יוצר). משותף גם ל-route של חיבור ה-OAuth ליוטיוב. */
 export async function resolveCreatorId(
   user: Awaited<ReturnType<typeof requireActiveUser>>,
@@ -436,64 +460,10 @@ export async function resolveCreatorId(
   return creator?.id ?? null;
 }
 
-/** יצירה/עריכה של ערוץ — channelId ריק = יצירה, אחרת עריכה (חייב להשתייך ליוצר הנוכחי) */
-export async function upsertCreatorChannel(
-  _prev: SettingsFormState,
-  formData: FormData,
-): Promise<SettingsFormState> {
-  const user = await requireActiveUser();
-  const creatorId = await resolveCreatorId(user);
-  if (!creatorId) {
-    return { status: "error", message: "רק חשבון יוצר יכול לנהל ערוצים." };
-  }
-
-  const parsed = channelSchema.safeParse({
-    channelId: formData.get("channelId"),
-    platform: formData.get("platform"),
-    handle: formData.get("handle"),
-    channelUrl: formData.get("channelUrl"),
-  });
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: "יש לתקן את השדות המסומנים.",
-      fieldErrors: fieldErrorsFrom(parsed.error),
-    };
-  }
-  const d = parsed.data;
-
-  try {
-    if (d.channelId) {
-      const existing = await prisma.creatorChannel.findFirst({
-        where: { id: d.channelId, creatorId },
-        select: { id: true },
-      });
-      if (!existing) {
-        return { status: "error", message: "הערוץ לא נמצא או שאינו שייך לחשבון שלך." };
-      }
-      await prisma.creatorChannel.update({
-        where: { id: d.channelId },
-        data: { platform: d.platform, handle: d.handle, channelUrl: d.channelUrl },
-      });
-    } else {
-      await prisma.creatorChannel.create({
-        data: { creatorId, platform: d.platform, handle: d.handle, channelUrl: d.channelUrl },
-      });
-    }
-  } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return {
-        status: "error",
-        message: "כבר קיים ערוץ מפלטפורמה זו — ערוך את הערוץ הקיים במקום להוסיף חדש.",
-        fieldErrors: { platform: "פלטפורמה זו כבר מחוברת" },
-      };
-    }
-    throw e;
-  }
-
-  revalidatePath(REVALIDATE_PATH);
-  return { status: "success", message: d.channelId ? "הערוץ עודכן." : "הערוץ נוסף." };
-}
+/*
+ * יצירה/עריכה ידנית של ערוץ (upsertCreatorChannel) הוסרה: ערוצים נוצרים רק דרך חיבור OAuth
+ * (src/app/api/connect/*), כדי שלא ניתן יהיה להזין ערוץ/עוקבים שלא אומתו מול הפלטפורמה.
+ */
 
 /** מחיקת ערוץ — מוודא שהוא שייך ליוצר הנוכחי לפני המחיקה */
 export async function deleteCreatorChannel(formData: FormData): Promise<void> {
@@ -506,9 +476,24 @@ export async function deleteCreatorChannel(formData: FormData): Promise<void> {
 
   const existing = await prisma.creatorChannel.findFirst({
     where: { id: channelId, creatorId },
-    select: { id: true },
+    select: { id: true, platform: true, oauthRefreshTokenEnc: true },
   });
   if (!existing) return;
+
+  // ביטול ההרשאה מול גוגל (best-effort) — כדי שהטוקן לא יישאר תקף אחרי הניתוק.
+  // (Meta: אין לנו טוקן משתמש שמור לביטול — ההרשאה נשארת עד הסרה ידנית בהגדרות פייסבוק.)
+  if (existing.platform === "YOUTUBE" && existing.oauthRefreshTokenEnc) {
+    try {
+      await fetch("https://oauth2.googleapis.com/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ token: decryptOAuthToken(existing.oauthRefreshTokenEnc) }),
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch {
+      // כשל ברשת/פענוח לא חוסם את הניתוק המקומי
+    }
+  }
 
   await prisma.creatorChannel.delete({ where: { id: channelId } });
   revalidatePath(REVALIDATE_PATH);
@@ -520,9 +505,7 @@ export async function deleteCreatorChannel(formData: FormData): Promise<void> {
  * נשמר כרשומה משפטית (עם תאריך ו-IP); ניתוק הערוץ אינו מוחק אותה, וחיבור מחדש לא דורש הסכמה חוזרת.
  * הסכמת פייסבוק/אינסטגרם נרשמות יחד (אותה זרימת חיבור).
  */
-const consentPlatformSchema = z.enum(
-  SOCIAL_PLATFORMS as [SocialPlatform, ...SocialPlatform[]],
-);
+const consentPlatformSchema = z.enum(SOCIAL_PLATFORMS as [SocialPlatform, ...SocialPlatform[]]);
 
 export async function recordSocialConsent(formData: FormData): Promise<void> {
   const user = await requireActiveUser();
@@ -576,15 +559,20 @@ const pricingPackageSchema = z.object({
     message: "יש לבחור סוג תוצר",
   }),
   title: z.string().trim().min(1, "שם החבילה הוא שדה חובה").max(160),
-  priceILS: z.coerce.number({ message: "מחיר לא תקין" }).min(0, "מחיר לא תקין"),
+  priceILS: z.coerce
+    .number({ message: "מחיר לא תקין" })
+    .positive("המחיר חייב להיות גדול מ-0")
+    .max(100_000_000, "המחיר חורג מהמותר"),
   turnaroundDays: z.coerce
     .number({ message: "זמן אספקה לא תקין" })
-    .int()
-    .min(0, "זמן אספקה לא תקין"),
+    .int("מספר ימים שלם")
+    .min(1, "זמן אספקה: לפחות יום אחד")
+    .max(365, "זמן אספקה: עד שנה"),
   revisionsIncluded: z.coerce
     .number({ message: "מספר תיקונים לא תקין" })
     .int()
     .min(0, "מספר תיקונים לא תקין")
+    .max(20, "מספר תיקונים חורג מהמותר")
     .default(1),
 });
 
@@ -600,11 +588,11 @@ export async function upsertCreatorPricingPackage(
   }
 
   const parsed = pricingPackageSchema.safeParse({
-    packageId: formData.get("packageId"),
-    deliverableType: formData.get("deliverableType"),
-    title: formData.get("title"),
-    priceILS: formData.get("priceILS"),
-    turnaroundDays: formData.get("turnaroundDays"),
+    packageId: fv(formData, "packageId"),
+    deliverableType: fv(formData, "deliverableType"),
+    title: fv(formData, "title"),
+    priceILS: fv(formData, "priceILS"),
+    turnaroundDays: fv(formData, "turnaroundDays"),
     revisionsIncluded: formData.get("revisionsIncluded") || undefined,
   });
   if (!parsed.success) {
@@ -698,7 +686,7 @@ export async function deleteCreatorPricingPackage(formData: FormData): Promise<v
 const adSpaceOwnerSchema = z.object({
   companyName: z.string().trim().min(1, "שם החברה הוא שדה חובה").max(160),
   contactName: z.string().trim().min(1, "שם איש קשר הוא שדה חובה").max(120),
-  contactPhone: z.string().trim().min(1, "טלפון איש קשר הוא שדה חובה").max(20),
+  contactPhone: phoneNumber,
   billingEmail: z.string().trim().email("אימייל לא תקין"),
   billingAddress: z.string().trim().min(1, "כתובת לחיוב היא שדה חובה").max(300),
   bank: bankSchema,
@@ -722,16 +710,16 @@ export async function updateAdSpaceOwnerSettings(
   }
 
   const parsed = adSpaceOwnerSchema.safeParse({
-    companyName: formData.get("companyName"),
-    contactName: formData.get("contactName"),
-    contactPhone: formData.get("contactPhone"),
-    billingEmail: formData.get("billingEmail"),
-    billingAddress: formData.get("billingAddress"),
+    companyName: fv(formData, "companyName"),
+    contactName: fv(formData, "contactName"),
+    contactPhone: fv(formData, "contactPhone"),
+    billingEmail: fv(formData, "billingEmail"),
+    billingAddress: fv(formData, "billingAddress"),
     bank: {
-      bank: formData.get("bank.bank"),
-      branch: formData.get("bank.branch"),
-      account: formData.get("bank.account"),
-      accountHolder: formData.get("bank.accountHolder"),
+      bank: fv(formData, "bank.bank"),
+      branch: fv(formData, "bank.branch"),
+      account: fv(formData, "bank.account"),
+      accountHolder: fv(formData, "bank.accountHolder"),
     },
   });
   if (!parsed.success) {

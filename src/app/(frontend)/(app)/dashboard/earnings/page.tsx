@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
 import {
   getCreatorEarnings,
@@ -34,7 +33,7 @@ const TXN_STATUS_LABEL: Record<string, string> = {
 
 export default async function EarningsPage() {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("creator")) redirect("/dashboard");
+  requireRole(user, ["creator"]);
 
   const data = await getCreatorEarnings(user.id, true);
   const { kpis, escrow, transactions, invoices } = data;

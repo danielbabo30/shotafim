@@ -10,12 +10,29 @@ import { CampaignBriefView } from "@/components/app/pitch/campaign-brief-view";
 import { ApplicationReviewItem } from "@/components/app/pitch/application-review-item";
 import { ApplyForm, type OfferOption } from "@/components/app/pitch/apply-form";
 import { StatusChip } from "@/components/app/status-chip";
+import { ActionErrorBanner } from "@/components/app/action-error-banner";
+import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/app/confirm-button";
+import { cancelCampaign, publishCampaign } from "@/lib/actions/campaign-actions";
+import { withdrawApplication } from "@/lib/actions/application-actions";
 import { ChevronLeftIcon } from "@/components/marketing/icons";
 
 export const metadata: Metadata = { title: "בריף קמפיין" };
 
-export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+const dateFmt = new Intl.DateTimeFormat("he-IL", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+export default async function CampaignDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ err?: string }>;
+}) {
+  const [{ id }, { err }] = await Promise.all([params, searchParams]);
   const user = await requireActiveUser();
   const detail = await getCampaignDetail(id);
   if (!detail) notFound();
@@ -68,7 +85,35 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         {isOwner ? "כל הקמפיינים" : "גילוי בריפים"}
       </Link>
 
+      <ActionErrorBanner code={err} />
+
       <CampaignBriefView brief={brief} />
+
+      {isOwner && (brief.status === "DRAFT" || brief.status === "OPEN_FOR_PITCHES") && (
+        <div className="border-outline-variant bg-surface-lowest flex flex-wrap items-center gap-2 rounded-xl border p-4">
+          {brief.status === "DRAFT" && (
+            <form action={publishCampaign}>
+              <input type="hidden" name="campaignId" value={brief.id} />
+              <Button type="submit" size="md">
+                פרסם להצעות
+              </Button>
+            </form>
+          )}
+          <form action={cancelCampaign}>
+            <input type="hidden" name="campaignId" value={brief.id} />
+            <ConfirmButton
+              variant="ghost"
+              size="md"
+              confirmMessage="לבטל את הקמפיין? הצעות והזמנות פתוחות ייסגרו ולא ניתן יהיה לשחזר."
+            >
+              בטל קמפיין
+            </ConfirmButton>
+          </form>
+          <p className="text-on-surface-variant text-xs">
+            ביטול סוגר הצעות והזמנות פתוחות. לא ניתן לבטל קמפיין שנפתחו בו חוזים.
+          </p>
+        </div>
+      )}
 
       {isOwner && (
         <section className="flex flex-col gap-3">
@@ -116,6 +161,36 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           </div>
         )}
 
+      {detail.invitationPrefill && (
+        <div className="border-primary/40 bg-primary-fixed/20 flex flex-col gap-2 rounded-xl border p-5 text-sm">
+          <p className="text-on-surface font-semibold">
+            {detail.invitationPrefill.adSpaceAssetTitle
+              ? "בקשת שריון שהתקבלה"
+              : "הוזמנת להגיש הצעה לבריף הזה"}
+          </p>
+          {detail.invitationPrefill.adSpaceAssetTitle && (
+            <p className="text-on-surface-variant">
+              שטח: {detail.invitationPrefill.adSpaceAssetTitle}
+            </p>
+          )}
+          {detail.invitationPrefill.requestedStartDate &&
+            detail.invitationPrefill.requestedEndDate && (
+              <p className="text-on-surface-variant">
+                חלון מבוקש: {dateFmt.format(detail.invitationPrefill.requestedStartDate)} –{" "}
+                {dateFmt.format(detail.invitationPrefill.requestedEndDate)}
+              </p>
+            )}
+          {detail.canDecline && (
+            <form action={withdrawApplication} className="mt-1">
+              <input type="hidden" name="applicationId" value={detail.myApplication?.id ?? ""} />
+              <ConfirmButton variant="ghost" size="md" confirmMessage="לדחות את ההזמנה?">
+                דחה הזמנה
+              </ConfirmButton>
+            </form>
+          )}
+        </div>
+      )}
+
       {detail.canApply && (
         <ApplyForm
           campaignId={brief.id}
@@ -126,16 +201,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               ? {
                   price: detail.invitationPrefill.proposedPriceILS,
                   days: detail.invitationPrefill.estimatedDeliveryDays,
+                  assetId: detail.invitationPrefill.adSpaceAssetId,
                 }
               : null
           }
         />
-      )}
-
-      {detail.viewer === "other" && (
-        <p className="text-on-surface-variant border-outline-variant rounded-xl border border-dashed p-6 text-sm">
-          הבריף הזה אינו מתאים לסוג החשבון שלך.
-        </p>
       )}
     </div>
   );

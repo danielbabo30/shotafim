@@ -21,7 +21,7 @@ function SubmitButton() {
   );
 }
 
-/** ארכוב (soft-delete) של נכס פרסום. חסום כשיש שריון פעיל — אז רק מושבת. */
+/** ארכוב (soft-delete) של נכס פרסום. חסום כשיש שריון פעיל. */
 export function AssetDeleteButton({
   assetId,
   blockedByBookings,
@@ -38,7 +38,7 @@ export function AssetDeleteButton({
         <p className="text-on-surface text-sm font-semibold">ארכוב הנכס</p>
         <p className="text-on-surface-variant mt-0.5 text-xs">
           {blockedByBookings
-            ? "לא ניתן לארכב — יש שריון פעיל או עתידי לנכס. הנכס הושבת מהקטלוג."
+            ? "לא ניתן לארכב — יש שריון פעיל או עתידי לנכס. אפשר להשבית את הנכס ידנית במתג ההפעלה."
             : "הנכס יוסר מהקטלוג ומהרשימה. פעולה זו אינה הפיכה מהממשק."}
         </p>
       </div>

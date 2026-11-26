@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { ShieldCheckIcon } from "@/components/marketing/icons";
-import { openDispute, DISPUTE_ACTION_INITIAL } from "@/lib/actions/dispute-actions";
+import { openDispute } from "@/lib/actions/dispute-actions";
+import { DISPUTE_ACTION_INITIAL } from "@/lib/dispute-action-state";
 import type { ContractDisputeContext } from "@/lib/disputes";
 
 /**

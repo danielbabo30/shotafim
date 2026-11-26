@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { getReportsData, ESCROW_STATUS_META } from "@/lib/reports";
 import { StatCard } from "@/components/app/stat-card";
@@ -20,6 +20,7 @@ export const metadata: Metadata = { title: "דוחות" };
 
 export default async function ReportsPage() {
   const user = await requireActiveUser();
+  requireRole(user, ["brand", "admin"]);
   const data = await getReportsData(user.id);
   const { kpis } = data;
 

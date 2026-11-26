@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { ContractStatus, DeliverableType, SubmissionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { effectiveReliabilityScore } from "@/lib/reliability";
 import { requireActiveUser } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { deliverableLabel } from "@/lib/campaign-brief";
@@ -25,7 +26,8 @@ export type CreatorKpis = {
   /** הצעות שהוגשו וממתינות למענה */
   pendingApplications: number;
   /** ציון אמינות והשלמה (0–100) */
-  reliabilityScore: number;
+  /** null = אין עדיין היסטוריה (מוצג "—") */
+  reliabilityScore: number | null;
 };
 
 /** שלב ב-stepper של החוזה (1 → 4) */
@@ -68,7 +70,9 @@ export type CreatorDashboardData = {
 
 export const CONTRACT_STEPS = ["אישור חוזה", "העלאת סקיצה", "אישור מותג", "פרסום ותשלום"] as const;
 
-const heDeadline = (deadline: Date, now: Date): string => {
+const heDeadline = (deadline: Date, now: Date, status?: ContractStatus): string => {
+  // חוזה שכבר הוגש לבדיקה — המועד כבר לא באחריות היוצר
+  if (status === "SUBMITTED_FOR_REVIEW" || status === "APPROVED") return "הוגש לבדיקה";
   const days = Math.ceil((deadline.getTime() - now.getTime()) / 864e5);
   if (days < 0) return `${Math.abs(days)} ימים באיחור`;
   if (days === 0) return "המועד היום";
@@ -143,7 +147,7 @@ function toContractVM(c: ContractRow, now: Date): CreatorContractVM {
     escrowAmount,
     escrowFunded,
     status: c.status,
-    deadlineLabel: heDeadline(c.deadline, now),
+    deadlineLabel: heDeadline(c.deadline, now, c.status),
     step,
     stepHint,
     cta,
@@ -154,7 +158,7 @@ const EMPTY_KPIS: CreatorKpis = {
   availableToWithdraw: 0,
   escrowGuaranteed: 0,
   pendingApplications: 0,
-  reliabilityScore: 0,
+  reliabilityScore: null,
 };
 
 export const getCreatorDashboardData = cache(async (): Promise<CreatorDashboardData> => {
@@ -181,6 +185,8 @@ export const getCreatorDashboardData = cache(async (): Promise<CreatorDashboardD
     contractRows,
     briefRows,
     categoryLabels,
+    approvedContracts,
+    refundedContracts,
   ] = await Promise.all([
     prisma.creatorProfile.findUnique({
       where: { userId: user.id },
@@ -247,6 +253,8 @@ export const getCreatorDashboardData = cache(async (): Promise<CreatorDashboardD
       },
     }),
     getPartnerCategoryLabels(),
+    prisma.contract.count({ where: { providerId: user.id, status: "APPROVED" } }),
+    prisma.contract.count({ where: { providerId: user.id, status: "REFUNDED" } }),
   ]);
 
   const released = Number(releasedAgg._sum.amountILS ?? 0);
@@ -289,7 +297,11 @@ export const getCreatorDashboardData = cache(async (): Promise<CreatorDashboardD
       availableToWithdraw: Math.max(0, released - withdrawn),
       escrowGuaranteed,
       pendingApplications,
-      reliabilityScore: Math.round(profile?.reliabilityScore ?? 0),
+      reliabilityScore: effectiveReliabilityScore(
+        profile?.reliabilityScore ?? 0,
+        approvedContracts,
+        refundedContracts,
+      ),
     },
     contracts,
     briefs,

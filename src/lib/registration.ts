@@ -29,6 +29,7 @@ export type RegistrationUser = {
 /**
  * מאמת session לשלבי ההרשמה שאחרי יצירת החשבון (roles / profile / complete).
  * מרשה כל סטטוס שאינו חסום — משתמש PENDING_ONBOARDING הוא המצב הרגיל כאן.
+ * משתמש שכבר סיים הרשמה מופנה ל-/dashboard.
  * אין session → /sign-in; חשבון חסום/מחוק → /sign-in?error=account.
  */
 export async function requireRegistrationUser(): Promise<RegistrationUser> {
@@ -39,11 +40,25 @@ export async function requireRegistrationUser(): Promise<RegistrationUser> {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, status: true, roles: true, deletedAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      status: true,
+      roles: true,
+      deletedAt: true,
+      termsAcceptedAt: true,
+    },
   });
 
   if (!user || user.deletedAt || user.status === "SUSPENDED" || user.status === "BANNED") {
     redirect("/sign-in?error=account");
+  }
+
+  // משתמש שסיים הרשמה (ACTIVE + אישר תנאים + יש תפקידים) לא יכול לשנות תפקידים/פרופילים
+  // דרך server actions של ההרשמה — ההגנה כאן ולא רק בדפים.
+  if (user.status === "ACTIVE" && user.termsAcceptedAt != null && user.roles.length > 0) {
+    redirect("/dashboard");
   }
 
   const roleKeys = sortRoleKeys(user.roles.map(roleKeyFromUserRole)).filter(isRegistrationRoleKey);

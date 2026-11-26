@@ -103,9 +103,10 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
       { href: "/dashboard/assets", label: "שטחי הפרסום שלי", icon: "screen" },
       { href: "/dashboard/discover", label: "גילוי קמפיינים", icon: "search" },
       { href: "/dashboard/businesses", label: "חיפוש עסקים", icon: "search" },
-      { href: "/dashboard/applications", label: "הצעות שהגשתי", icon: "inbox" },
+      { href: "/dashboard/applications", label: "ההצעות שלי", icon: "inbox" },
       { href: "/dashboard/contracts", label: "חוזים", icon: "contract" },
       { href: "/dashboard/bookings", label: "יומן שיבוצים", icon: "calendar" },
+      { href: "/dashboard/messages", label: "הודעות", icon: "chat" },
     ],
   },
   admin: {
@@ -116,7 +117,6 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
     emoji: "🛡️",
     nav: [
       DASHBOARD,
-      { href: "/dashboard/verifications", label: "אימות פרופילים", icon: "verified" },
       { href: "/dashboard/disputes", label: "מחלוקות", icon: "gavel" },
       { href: "/dashboard/reports", label: "דוחות מערכת", icon: "chart" },
     ],
@@ -126,7 +126,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
 /** ניווט תחתון — משותף לכל התפקידים */
 export const FOOTER_NAV: NavItem[] = [
   { href: "/dashboard/settings", label: "הגדרות", icon: "settings" },
-  { href: "/help", label: "עזרה", icon: "help" },
+  { href: "/contact", label: "עזרה ותמיכה", icon: "help" },
 ];
 
 const USER_ROLE_TO_KEY: Record<UserRole, RoleKey> = {

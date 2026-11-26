@@ -7,19 +7,24 @@ import { APPLICATION_STATUS_META } from "@/lib/pitch";
 import { ApplicationReviewItem } from "@/components/app/pitch/application-review-item";
 import { StatusChip } from "@/components/app/status-chip";
 import { withdrawApplication } from "@/lib/actions/application-actions";
-import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/app/confirm-button";
+import { ActionErrorBanner } from "@/components/app/action-error-banner";
 
-export const metadata: Metadata = { title: "פניות והצעות" };
+export const metadata: Metadata = { title: "ההצעות שלי" };
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long" });
 
-export default async function ApplicationsPage() {
-  const user = await requireActiveUser();
-  if (user.activeRole === "brand") return <BrandInbox />;
-  return <ProviderPitches />;
+export default async function ApplicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ err?: string }>;
+}) {
+  const [user, { err }] = await Promise.all([requireActiveUser(), searchParams]);
+  if (user.activeRole === "brand") return <BrandInbox err={err} />;
+  return <ProviderPitches err={err} />;
 }
 
-async function BrandInbox() {
+async function BrandInbox({ err }: { err?: string }) {
   const applications = await listBrandApplications();
 
   return (
@@ -30,6 +35,8 @@ async function BrandInbox() {
           הצעות שהתקבלו לבריפים שלך וממתינות למענה. אישור הצעה יוצר חוזה ופותח חדר עבודה.
         </p>
       </div>
+
+      <ActionErrorBanner code={err} />
 
       {applications.length === 0 ? (
         <p className="text-on-surface-variant border-outline-variant rounded-xl border border-dashed p-8 text-sm">
@@ -54,7 +61,7 @@ async function BrandInbox() {
   );
 }
 
-async function ProviderPitches() {
+async function ProviderPitches({ err }: { err?: string }) {
   const pitches = await listProviderApplications();
 
   const invitations = pitches.filter((p) => p.status === "INVITED");
@@ -63,11 +70,13 @@ async function ProviderPitches() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-on-surface text-2xl font-bold">פניות והצעות</h1>
+        <h1 className="text-on-surface text-2xl font-bold">ההצעות שלי</h1>
         <p className="text-on-surface-variant mt-1 text-sm leading-relaxed">
           הזמנות שקיבלת ממפרסמים וההצעות שהגשת. הצעה שאושרה פותחת חדר עבודה.
         </p>
       </div>
+
+      <ActionErrorBanner code={err} />
 
       {invitations.length > 0 && (
         <section className="flex flex-col gap-3">
@@ -158,9 +167,13 @@ async function ProviderPitches() {
                     {p.status === "SUBMITTED" && (
                       <form action={withdrawApplication}>
                         <input type="hidden" name="applicationId" value={p.id} />
-                        <Button type="submit" variant="ghost" size="md">
+                        <ConfirmButton
+                          variant="ghost"
+                          size="md"
+                          confirmMessage="לבטל את ההצעה? אפשר יהיה להגיש הצעה חדשה כל עוד הבריף פתוח."
+                        >
                           בטל הצעה
-                        </Button>
+                        </ConfirmButton>
                       </form>
                     )}
                   </div>

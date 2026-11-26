@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getContractRoom } from "@/lib/contracts";
 import { getContractReviewContext } from "@/lib/reviews";
+import { getContractProofs } from "@/lib/proof-of-play";
 import { getPartnerProgramForContract } from "@/lib/partner-program";
 import { getContractDisputeContext } from "@/lib/disputes";
 import { getCities } from "@/lib/cities";
@@ -18,6 +19,7 @@ import { DeliverableProofer } from "@/components/app/contract-room/deliverable-p
 import { EscrowPanel } from "@/components/app/contract-room/escrow-panel";
 import { PartnerProgramPanel } from "@/components/app/contract-room/partner-program-panel";
 import { PartnerDashboard } from "@/components/app/contract-room/partner-dashboard";
+import { ProofOfPlayPanel } from "@/components/app/contract-room/proof-of-play-panel";
 import { RoomChat } from "@/components/app/contract-room/room-chat";
 import { ShippingPanel } from "@/components/app/contract-room/shipping-panel";
 import { ReviewPromptDialog } from "@/components/app/review/review-prompt-dialog";
@@ -34,6 +36,7 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
   const cities = room.hasPhysicalProduct ? await getCities() : [];
   const partnerProgram = await getPartnerProgramForContract(id);
   const disputeContext = await getContractDisputeContext(id);
+  const proofs = await getContractProofs(id);
 
   const isBrand = room.viewerParty === "brand";
   const latest = room.submissions.at(-1) ?? null;
@@ -92,6 +95,15 @@ export default async function ContractRoomPage({ params }: { params: Promise<{ i
             </div>
           )}
         </header>
+
+        {proofs && (
+          <ProofOfPlayPanel
+            contractId={room.id}
+            viewerParty={proofs.viewerParty}
+            canUpload={proofs.canUpload}
+            proofs={proofs.proofs}
+          />
+        )}
 
         <DeliverableProofer
           contractId={room.id}

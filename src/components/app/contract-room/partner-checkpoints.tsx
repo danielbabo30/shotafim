@@ -1,8 +1,5 @@
 import { CalendarIcon } from "@/components/marketing/icons";
-import {
-  CHECKPOINT_STATUS_LABEL,
-  type PartnerCheckpointRow,
-} from "@/lib/partner-dashboard";
+import { CHECKPOINT_STATUS_LABEL, type PartnerCheckpointRow } from "@/lib/partner-dashboard";
 
 const nis = (n: number) => `₪${Math.round(n).toLocaleString("en-US")}`;
 const dateFmt = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long" });

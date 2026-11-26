@@ -36,7 +36,13 @@ export default async function RegisterCompletePage() {
         select: {
           displayName: true,
           channels: {
-            select: { id: true, platform: true, handle: true, followersCount: true, oauthTokenUpdatedAt: true },
+            select: {
+              id: true,
+              platform: true,
+              handle: true,
+              followersCount: true,
+              oauthTokenUpdatedAt: true,
+            },
           },
           socialConsents: { select: { platform: true, consentedAt: true } },
         },

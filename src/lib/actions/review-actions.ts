@@ -40,6 +40,9 @@ export async function submitReview(
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     return { error: "בחרו דירוג בין כוכב אחד לחמישה." };
   }
+  if (feedbackText.length > 2000) {
+    return { error: "חוות הדעת ארוכה מדי (עד 2,000 תווים)." };
+  }
   if (feedbackText.length < 3) {
     return { error: "כתבו חוות דעת קצרה (לפחות כמה מילים)." };
   }

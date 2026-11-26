@@ -85,3 +85,13 @@ export const requireActiveUser = cache(async (): Promise<AppUser> => {
 
 /** תווית התפקיד הפעיל להצגה (למשל "מצב מפרסם") */
 export const activeRoleLabel = (user: AppUser): string => ROLE_META[user.activeRole].label;
+
+/**
+ * Guard משותף לפי תפקיד: מפנה ל-/dashboard אם למשתמש אין אף אחד מהתפקידים.
+ * הבדיקה לפי `roleKeys` (תפקידים שיש למשתמש), לא לפי `activeRole` — אותה בדיקה בכל עמוד.
+ */
+export function requireRole(user: AppUser, allowed: RoleKey[]): void {
+  if (!allowed.some((r) => user.roleKeys.includes(r))) {
+    redirect("/dashboard");
+  }
+}

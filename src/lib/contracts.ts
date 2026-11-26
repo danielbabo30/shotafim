@@ -187,7 +187,7 @@ export const getContractRoom = cache(async (id: string): Promise<ContractRoom | 
       ? {
           name: providerName,
           image: contract.provider.image,
-          handle: creatorProfile?.channels[0]?.handle ?? null,
+          handle: creatorProfile?.channels[0]?.handle?.replace(/^@+/, "") ?? null,
         }
       : {
           name: contract.business.name,

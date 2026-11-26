@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/marketing/icons";
 import { reserveAdSpace } from "@/lib/actions/application-actions";
@@ -26,6 +26,10 @@ export function ReserveAdSpaceDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const [state, formAction, pending] = useActionState(reserveAdSpace, null);
   const errors = state?.fieldErrors ?? {};
+  const uid = useId();
+  const startId = `${uid}-start`;
+  const endId = `${uid}-end`;
+  const noteId = `${uid}-note`;
 
   return (
     <>
@@ -64,32 +68,41 @@ export function ReserveAdSpaceDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="reserve-start" className={labelCls}>
+              <label htmlFor={startId} className={labelCls}>
                 תאריך התחלה
               </label>
-              <input id="reserve-start" name="startDate" type="date" required className={field} />
+              <input
+                id={startId}
+                name="startDate"
+                type="date"
+                required
+                min={new Date().toISOString().slice(0, 10)}
+                className={field}
+              />
               {errors.startDate && <p className={errCls}>{errors.startDate}</p>}
             </div>
             <div>
-              <label htmlFor="reserve-end" className={labelCls}>
+              <label htmlFor={endId} className={labelCls}>
                 תאריך סיום
               </label>
-              <input id="reserve-end" name="endDate" type="date" required className={field} />
+              <input id={endId} name="endDate" type="date" required className={field} />
               {errors.endDate && <p className={errCls}>{errors.endDate}</p>}
             </div>
           </div>
 
           <div>
-            <label htmlFor="reserve-note" className={labelCls}>
+            <label htmlFor={noteId} className={labelCls}>
               הערה לבעל השטח (אופציונלי)
             </label>
             <textarea
-              id="reserve-note"
+              id={noteId}
               name="note"
               rows={3}
               className={`${field} h-auto py-2.5`}
+              maxLength={1000}
               placeholder="פרטים על הקמפיין, חומרים, דרישות מיוחדות…"
             />
+            {errors.note && <p className={errCls}>{errors.note}</p>}
           </div>
 
           <div className="flex justify-end gap-2">

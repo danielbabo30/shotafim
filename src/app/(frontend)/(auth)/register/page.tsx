@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { auth, signIn } from "@/auth";
+import { isRateLimited } from "@/lib/rate-limit";
 import { hasEmail, hasGoogle } from "@/env";
 import { AuthSplitScreen } from "@/components/auth/auth-split-screen";
 import { AuthProgress } from "@/components/auth/auth-progress";
@@ -85,9 +86,19 @@ export default async function RegisterPage({ searchParams }: { searchParams: Sea
             if (formData.get("consent") !== "on") {
               redirect("/register?error=consent");
             }
+            const email = String(formData.get("email") ?? "")
+              .trim()
+              .toLowerCase();
+            // SEC-A-03: הגבלת קישורי כניסה — לפי IP ולפי כתובת היעד
+            if (
+              (await isRateLimited("signin:ip", 10, 3600)) ||
+              (await isRateLimited("signin:email", 5, 3600, email))
+            ) {
+              redirect("/register?error=email");
+            }
             try {
               await signIn("resend", {
-                email: String(formData.get("email")),
+                email,
                 redirectTo: REDIRECT_TO,
               });
             } catch (err) {

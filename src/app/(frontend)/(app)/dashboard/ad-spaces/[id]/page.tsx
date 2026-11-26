@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { notFound } from "next/navigation";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getAdSpaceDetail } from "@/lib/ad-spaces";
 import { getPartnerCategoryLabels } from "@/lib/partner-categories-query";
 import { ReserveAdSpaceDialog } from "@/components/app/pitch/reserve-ad-space-dialog";
@@ -27,7 +27,7 @@ const rangeFmt = new Intl.DateTimeFormat("he-IL", {
 export default async function AdSpaceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("brand")) redirect("/dashboard");
+  requireRole(user, ["brand"]);
 
   const [space, categoryLabels] = await Promise.all([
     getAdSpaceDetail(id),
@@ -85,6 +85,21 @@ export default async function AdSpaceDetailPage({ params }: { params: Promise<{ 
             )}
           </span>
         </div>
+
+        {space.images.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {space.images.slice(0, 6).map((src) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={src}
+                src={src}
+                alt={space.title}
+                loading="lazy"
+                className="border-outline-variant aspect-video w-full rounded-lg border object-cover"
+              />
+            ))}
+          </div>
+        )}
 
         <p className="text-on-surface-variant text-sm leading-relaxed whitespace-pre-line">
           {space.description}

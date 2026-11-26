@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { RegistrationRoleKey } from "@/lib/registration";
-import { adSpaceAssetObjectSchema } from "@/lib/ad-space-asset-form";
+import { adSpaceAssetSchema } from "@/lib/ad-space-asset-form";
 
 /**
  * ולידציה של טופס שלב 3 (הגדרת פרופיל). כל לשונית שולחת את שדותיה עם prefix
@@ -93,7 +93,7 @@ const spaceSchema = z.object({
   billingEmail: emailField,
   billingAddress: reqStr("כתובת רשמית היא שדה חובה"),
   // מבנה הנכס — סכמה משותפת עם טופס «הוספת / עריכת נכס» (src/lib/ad-space-asset-form.ts)
-  asset: adSpaceAssetObjectSchema,
+  asset: adSpaceAssetSchema,
 });
 
 export type BrandInput = z.infer<typeof brandSchema>;

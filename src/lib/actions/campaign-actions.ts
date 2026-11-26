@@ -11,6 +11,7 @@ import {
   type CampaignFormState,
 } from "@/lib/campaign-brief";
 import { normalizeCheckpoints, partnerTermsSchema } from "@/lib/partner-terms";
+import { withActionError } from "@/lib/action-errors";
 
 /**
  * יצירת בריף קמפיין (טיוטה או פרסום להצעות).
@@ -153,4 +154,86 @@ export async function createCampaign(
 
   revalidatePath("/dashboard/campaigns");
   redirect(`/dashboard/campaigns?created=${campaign.id}`);
+}
+
+/** טוען קמפיין השייך למפרסם המחובר (או null) */
+async function loadOwnedCampaign(campaignId: string) {
+  const user = await requireActiveUser();
+  if (!user.roleKeys.includes("brand")) return null;
+  return prisma.campaign.findFirst({
+    where: { id: campaignId, business: { userId: user.id } },
+    select: {
+      id: true,
+      status: true,
+      description: true,
+      deliverables: true,
+      totalBudgetILS: true,
+      compensationModel: true,
+      endDate: true,
+      _count: { select: { contracts: true } },
+    },
+  });
+}
+
+/**
+ * פרסום טיוטה להצעות (DRAFT → OPEN_FOR_PITCHES) — אותם תנאי פרסום כמו ביצירה.
+ * שגיאות חוזרות כ-`?err=` ומוצגות בעמוד הקמפיין.
+ */
+export async function publishCampaign(formData: FormData): Promise<void> {
+  const id = String(formData.get("campaignId") ?? "");
+  const campaign = await loadOwnedCampaign(id);
+  if (!campaign) redirect(withActionError("/dashboard/campaigns", "campaign-not-found"));
+  const path = `/dashboard/campaigns/${campaign.id}`;
+
+  if (campaign.status !== "DRAFT") redirect(withActionError(path, "campaign-not-publishable"));
+  if (campaign.endDate && campaign.endDate.getTime() < Date.now() - 864e5) {
+    redirect(withActionError(path, "campaign-ended"));
+  }
+  const needsBudget = campaign.compensationModel !== "REVENUE_SHARE";
+  if (
+    campaign.description.length < 20 ||
+    campaign.deliverables.length === 0 ||
+    (needsBudget && Number(campaign.totalBudgetILS) <= 0)
+  ) {
+    redirect(withActionError(path, "campaign-incomplete"));
+  }
+
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: { status: "OPEN_FOR_PITCHES" },
+  });
+
+  revalidatePath("/dashboard/campaigns");
+  revalidatePath(path);
+  redirect(path);
+}
+
+/**
+ * ביטול קמפיין (טיוטה / פתוח להצעות). מותר רק כשלא נפתחו חוזים —
+ * ביטול חוזה/הפקדה שייך לשכבת הכספים. הצעות והזמנות פתוחות נסגרות (REJECTED).
+ */
+export async function cancelCampaign(formData: FormData): Promise<void> {
+  const id = String(formData.get("campaignId") ?? "");
+  const campaign = await loadOwnedCampaign(id);
+  if (!campaign) redirect(withActionError("/dashboard/campaigns", "campaign-not-found"));
+  const path = `/dashboard/campaigns/${campaign.id}`;
+
+  if (campaign.status !== "DRAFT" && campaign.status !== "OPEN_FOR_PITCHES") {
+    redirect(path);
+  }
+  if (campaign._count.contracts > 0) redirect(withActionError(path, "campaign-has-contracts"));
+
+  await prisma.$transaction([
+    prisma.campaignApplication.updateMany({
+      where: { campaignId: campaign.id, status: { in: ["INVITED", "SUBMITTED"] } },
+      data: { status: "REJECTED" },
+    }),
+    prisma.campaign.update({ where: { id: campaign.id }, data: { status: "CANCELLED" } }),
+  ]);
+
+  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/discover");
+  revalidatePath(path);
+  redirect(path);
 }

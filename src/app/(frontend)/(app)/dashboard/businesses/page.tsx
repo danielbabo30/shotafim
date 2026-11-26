@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import {
   BusinessDirectoryCard,
   BusinessDirectoryEmptyState,
@@ -11,6 +10,7 @@ import {
   getPartnerCategoriesForScope,
   getPartnerCategoryLabels,
 } from "@/lib/partner-categories-query";
+import { ActionErrorBanner } from "@/components/app/action-error-banner";
 import { getCities } from "@/lib/cities";
 
 export const metadata: Metadata = { title: "חיפוש עסקים" };
@@ -18,14 +18,12 @@ export const metadata: Metadata = { title: "חיפוש עסקים" };
 export default async function BusinessesDirectoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; city?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; city?: string; err?: string }>;
 }) {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("creator") && !user.roleKeys.includes("space")) {
-    redirect("/dashboard");
-  }
+  requireRole(user, ["creator", "space"]);
 
-  const { q = "", category = "", city = "" } = await searchParams;
+  const { q = "", category = "", city = "", err } = await searchParams;
 
   const [businesses, categories, categoryLabels, cities] = await Promise.all([
     getBusinessDirectory({
@@ -48,6 +46,8 @@ export default async function BusinessesDirectoryPage({
           חפשו עסקים פעילים במערכת לפי שם, קטגוריה או עיר, וצרו איתם קשר ישירות.
         </p>
       </div>
+
+      <ActionErrorBanner code={err} />
 
       <BusinessDirectorySearchForm
         query={q}

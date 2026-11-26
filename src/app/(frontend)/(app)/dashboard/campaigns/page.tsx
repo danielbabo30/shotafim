@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getBrandContext, listBrandCampaigns } from "@/lib/campaigns";
 import { CampaignStatusBadge } from "@/components/app/campaign-status-badge";
 import { deliverableLabel, targetTypeLabel } from "@/lib/campaign-brief";
@@ -22,7 +21,7 @@ export default async function CampaignsPage({
   searchParams: Promise<{ created?: string }>;
 }) {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("brand")) redirect("/dashboard");
+  requireRole(user, ["brand"]);
 
   const [brand, campaigns, { created }] = await Promise.all([
     getBrandContext(),

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getBrandContext } from "@/lib/campaigns";
 import { CampaignWizard } from "@/components/app/campaign-wizard";
 
@@ -9,7 +8,7 @@ export const metadata: Metadata = { title: "יצירת בריף קמפיין" };
 
 export default async function NewCampaignPage() {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("brand")) redirect("/dashboard");
+  requireRole(user, ["brand"]);
 
   const brand = await getBrandContext();
 

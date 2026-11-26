@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isRateLimited } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import {
   Prisma,
@@ -14,7 +15,6 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { DISPUTE_REASON_META, reasonsForCompensationModel } from "@/lib/disputes";
 
 export type DisputeActionState = { status: "idle" | "error" | "success"; message?: string };
-export const DISPUTE_ACTION_INITIAL: DisputeActionState = { status: "idle" };
 
 const isDisputeReason = (v: string): v is DisputeReason => v in DISPUTE_REASON_META;
 const RESOLUTIONS: DisputeStatus[] = ["RESOLVED_PAYOUT", "RESOLVED_REFUND", "SPLIT"];
@@ -41,6 +41,10 @@ export async function openDispute(
   const contractId = String(formData.get("contractId") ?? "");
   const reason = String(formData.get("reason") ?? "");
   const description = String(formData.get("description") ?? "").trim();
+
+  if (await isRateLimited("dispute:open", 10, 3600, user.id)) {
+    return { status: "error", message: "יותר מדי פניות בזמן קצר. נסו שוב מאוחר יותר." };
+  }
 
   if (!isDisputeReason(reason)) {
     return { status: "error", message: "עילת מחלוקת לא תקינה." };
@@ -219,9 +223,12 @@ export async function issueEnforcement(
 
     if (type === "SUSPENSION" && target.status === "ACTIVE") {
       await tx.user.update({ where: { id: target.id }, data: { status: "SUSPENDED" } });
+      // ניתוק מיידי — מוחקים את ה-sessions הפעילים (SEC-A-08)
+      await tx.session.deleteMany({ where: { userId: target.id } });
     }
     if (type === "BAN") {
       await tx.user.update({ where: { id: target.id }, data: { status: "BANNED" } });
+      await tx.session.deleteMany({ where: { userId: target.id } });
     }
 
     if (target.creatorProfile) {

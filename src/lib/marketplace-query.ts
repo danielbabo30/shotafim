@@ -49,6 +49,7 @@ export const getMarketplaceCreators = cache(async (): Promise<MarketplaceCreator
       id: true,
       userId: true,
       displayName: true,
+      avatarUrl: true,
       verificationStatus: true,
       primaryCity: { select: { district: true } },
       channels: {
@@ -77,6 +78,7 @@ export const getMarketplaceCreators = cache(async (): Promise<MarketplaceCreator
       id: c.id,
       userId: c.userId,
       displayName: c.displayName,
+      avatarUrl: c.avatarUrl,
       regionValue: region,
       regionLabel: region ? (REGION_LABEL.get(region) ?? "") : "",
       verified: c.verificationStatus === "VERIFIED",

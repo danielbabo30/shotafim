@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { issueEnforcement, DISPUTE_ACTION_INITIAL } from "@/lib/actions/dispute-actions";
+import { issueEnforcement } from "@/lib/actions/dispute-actions";
+import { DISPUTE_ACTION_INITIAL } from "@/lib/dispute-action-state";
 
 const TYPES = [
   { value: "WARNING", label: "אזהרה — תיעוד בלבד, ללא סנקציה" },

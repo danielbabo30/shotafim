@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { listDiscoverCampaigns } from "@/lib/applications";
 import { formatShekels } from "@/lib/dashboard-brand";
 import { deliverableLabel, targetTypeLabel } from "@/lib/campaign-brief";
@@ -13,9 +12,7 @@ const dateFmt = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long"
 
 export default async function DiscoverPage() {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("creator") && !user.roleKeys.includes("space")) {
-    redirect("/dashboard");
-  }
+  requireRole(user, ["creator", "space"]);
 
   const campaigns = await listDiscoverCampaigns();
 

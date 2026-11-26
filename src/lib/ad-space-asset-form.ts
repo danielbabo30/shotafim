@@ -62,14 +62,19 @@ const softNullableText = z
   .optional()
   .transform((v) => (v && v.length > 0 ? v : null));
 
-const nullableInt = z.coerce.number().int().min(0).nullable().catch(null);
+/** מספר שלם אופציונלי: ריק → null (לא 0); שלילי / לא מספר / חורג → שגיאה גלויה */
+const optionalInt = (max: number, msg: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+    z.coerce.number({ message: msg }).int(msg).min(0, msg).max(max, msg).nullable(),
+  );
 
 /**
  * מבנה הנכס עצמו. שדות ה-URL של התמונות והקטגוריות אופציונליים — בהרשמה הם לא
  * נשלחים כלל, בטופס העצמאי כן.
  */
 export const adSpaceAssetObjectSchema = z.object({
-  title: z.string().trim().min(1, "שם הנכס הוא שדה חובה"),
+  title: z.string().trim().min(1, "שם הנכס הוא שדה חובה").max(120, "שם הנכס ארוך מדי"),
   type: z.enum([
     "DIGITAL_BILLBOARD",
     "STATIC_BILLBOARD",
@@ -77,15 +82,21 @@ export const adSpaceAssetObjectSchema = z.object({
     "NEWSLETTER",
     "PODCAST_SPONSORSHIP",
   ]),
-  description: z.string().trim().min(1, "תיאור הנכס הוא שדה חובה"),
+  description: z.string().trim().min(1, "תיאור הנכס הוא שדה חובה").max(4000, "התיאור ארוך מדי"),
   cityId: nullableText,
-  address: nullableText,
+  address: nullableText.refine((v) => v === null || v.length <= 300, "הכתובת ארוכה מדי"),
   dimensions: nullableText,
   resolution: softNullableText,
-  spotLengthSeconds: nullableInt,
-  estimatedReach: nullableInt,
+  spotLengthSeconds: optionalInt(3600, "אורך ספוט תקין: 0–3,600 שניות"),
+  estimatedReach: optionalInt(2_000_000_000, "ערך חשיפות לא תקין"),
   pricingModel: z.enum(["DAILY", "WEEKLY", "MONTHLY", "PER_CPM", "PER_BROADCAST"]),
-  basePriceILS: z.coerce.number({ message: "מחיר בסיס לא תקין" }).min(0, "מחיר בסיס לא תקין"),
+  basePriceILS: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.coerce
+      .number({ message: "יש להזין מחיר בסיס" })
+      .positive("מחיר הבסיס חייב להיות גדול מ-0")
+      .max(100_000_000, "מחיר הבסיס חורג מהמותר"),
+  ),
   proofRequirement: z.enum(["PHOTO_CONFIRMATION", "ANALYTICS_REPORT", "SYSTEM_LOG"]),
   images: z
     .array(

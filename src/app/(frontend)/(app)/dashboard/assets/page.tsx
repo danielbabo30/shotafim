@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getMyAdSpaces } from "@/lib/my-ad-spaces";
 import { MyAssetsList } from "@/components/app/ad-spaces/my-assets-list";
 import { CalendarIcon, PlusIcon } from "@/components/marketing/icons";
@@ -14,7 +13,7 @@ export default async function MyAdSpacesPage({
   searchParams: Promise<{ created?: string; updated?: string }>;
 }) {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("space")) redirect("/dashboard");
+  requireRole(user, ["space"]);
 
   const [data, { created, updated }] = await Promise.all([getMyAdSpaces(), searchParams]);
 

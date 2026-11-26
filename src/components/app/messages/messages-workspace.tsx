@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { cn } from "@/lib/cn";
-import { sendMessage } from "@/lib/actions/message-actions";
+import { markConversationRead, sendMessage } from "@/lib/actions/message-actions";
 import { ConversationList } from "@/components/app/messages/conversation-list";
 import { MessageThread } from "@/components/app/messages/message-thread";
 import type {
@@ -29,12 +29,14 @@ export function MessagesWorkspace({
   /** נבחר מראש דרך `?conversation=<id>` (למשל מ"פתח צ'אט" באינדקס הציבורי) */
   initialSelectedConversationId?: string;
 }) {
-  const [conversations, setConversations] = useState(initial);
-  const [selectedId, setSelectedId] = useState<string | null>(
+  const initialSelected =
     (initialSelectedConversationId && initial.some((c) => c.id === initialSelectedConversationId)
       ? initialSelectedConversationId
-      : initial[0]?.id) ?? null,
+      : initial[0]?.id) ?? null;
+  const [conversations, setConversations] = useState(() =>
+    initial.map((c) => (c.id === initialSelected ? { ...c, unread: false } : c)),
   );
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelected);
   const [mobileView, setMobileView] = useState<MobileView>(
     initialSelectedConversationId ? "thread" : "list",
   );
@@ -57,10 +59,25 @@ export function MessagesWorkspace({
     );
   }, []);
 
-  const handleSelect = useCallback((id: string) => {
-    setSelectedId(id);
-    setMobileView("thread");
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unread: false } : c)));
+  const handleSelect = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setMobileView("thread");
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unread: false } : c)));
+      startTransition(async () => {
+        await markConversationRead(id);
+      });
+    },
+    [startTransition],
+  );
+
+  // השיחה שנבחרה מראש (או הראשונה) נפתחת מיד — מסמנים את הנקראות גם בה
+  useEffect(() => {
+    const first = initial.find((c) => c.id === selectedId);
+    if (first?.unread) {
+      void markConversationRead(first.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSend = useCallback(

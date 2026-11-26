@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { notFound } from "next/navigation";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getCreatorProfile } from "@/lib/creator-profile";
 import { listBrandOpenCampaigns } from "@/lib/campaigns";
 import { getPartnerCategoryLabels } from "@/lib/partner-categories-query";
@@ -29,7 +29,7 @@ const dateFmt = new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric
 export default async function CreatorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("brand")) redirect("/dashboard");
+  requireRole(user, ["brand"]);
 
   const [creator, categoryLabels, openCampaigns] = await Promise.all([
     getCreatorProfile(id),
@@ -52,9 +52,18 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
 
       {/* כותרת */}
       <header className="border-outline-variant bg-surface-lowest shadow-ambient flex flex-wrap items-start gap-5 rounded-xl border p-6">
-        <span className="bg-primary-fixed text-on-primary-fixed font-display grid size-20 shrink-0 place-items-center rounded-full text-2xl font-bold">
-          {initial}
-        </span>
+        {creator.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={creator.avatarUrl}
+            alt={creator.displayName}
+            className="size-20 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <span className="bg-primary-fixed text-on-primary-fixed font-display grid size-20 shrink-0 place-items-center rounded-full text-2xl font-bold">
+            {initial}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <h1 className="text-on-surface flex items-center gap-2 text-2xl font-bold">
             {creator.displayName}
@@ -69,7 +78,9 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
             )}
             <span className="flex items-center gap-1">
               <ShieldCheckIcon className="size-4" />
-              ציון אמינות {creator.reliabilityScore}/100
+              {creator.reliabilityScore == null
+                ? "יוצר חדש — אין עדיין ציון אמינות"
+                : `ציון אמינות ${creator.reliabilityScore}/100`}
             </span>
             {creator.reviewCount > 0 && (
               <span className="text-on-surface flex items-center gap-1 font-medium">
@@ -117,8 +128,8 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         <h2 className="text-on-surface text-lg font-bold">ערוצי סושיאל</h2>
         {creator.channels.length === 0 ? (
           <p className="border-outline-variant bg-surface-lowest text-on-surface-variant rounded-xl border p-4 text-sm leading-relaxed">
-            היוצר טרם חיבר ערוצי סושיאל. נתוני עוקבים ומעורבות יופיעו כאן לאחר שיחבר את
-            הפלטפורמות שלו.
+            היוצר טרם חיבר ערוצי סושיאל. נתוני עוקבים ומעורבות יופיעו כאן לאחר שיחבר את הפלטפורמות
+            שלו.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

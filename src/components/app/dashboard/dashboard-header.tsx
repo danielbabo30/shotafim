@@ -2,7 +2,14 @@ import Link from "next/link";
 import { DownloadIcon } from "@/components/marketing/icons";
 
 function greeting(): string {
-  const hour = new Date().getHours();
+  // שעון ישראל — לא שעון השרת (UTC בפרודקשן)
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hourCycle: "h23",
+      timeZone: "Asia/Jerusalem",
+    }).format(new Date()),
+  );
   if (hour < 12) return "בוקר טוב";
   if (hour < 17) return "צהריים טובים";
   if (hour < 21) return "ערב טוב";

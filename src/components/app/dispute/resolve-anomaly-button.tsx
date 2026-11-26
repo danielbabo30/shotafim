@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { resolveAnomalyFlag, DISPUTE_ACTION_INITIAL } from "@/lib/actions/dispute-actions";
+import { resolveAnomalyFlag } from "@/lib/actions/dispute-actions";
+import { DISPUTE_ACTION_INITIAL } from "@/lib/dispute-action-state";
 
 /** כפתור "סמן כטופל" לדגל אנומליה בודד (אדמין). */
 export function ResolveAnomalyButton({

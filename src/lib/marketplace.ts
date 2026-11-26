@@ -12,6 +12,8 @@ export type MarketplaceCreator = {
   /** User.id של היוצר — נדרש להזמנה לבריף */
   userId: string;
   displayName: string;
+  /** תמונת פרופיל (נתיב/קישור) — null אם לא הועלתה */
+  avatarUrl: string | null;
   /** ערך אזור לסינון — אחד מ-MARKETPLACE_REGIONS (ללא "all") */
   regionValue: string;
   regionLabel: string;

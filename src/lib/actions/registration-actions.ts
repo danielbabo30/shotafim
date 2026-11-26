@@ -12,6 +12,8 @@ import {
   sortRegistrationRoleKeys,
 } from "@/lib/registration";
 import { parseRegistration } from "@/lib/registration-schema";
+import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
+import { getValidCityIds } from "@/lib/cities";
 import { LEGAL_VERSION, REGISTRATION_CONSENT_DOCUMENTS } from "@/lib/legal-consent";
 
 export type RegistrationFormState = { error?: string } | null;
@@ -47,12 +49,8 @@ export type CompleteRegistrationState = {
   errorTab?: "brand" | "creator" | "space";
 } | null;
 
-const P2002_MESSAGES: Record<string, string> = {
-  companyId: "מספר ח.פ / ע.מ כבר רשום במערכת",
-  idNumber: "מספר הזהות / העוסק כבר רשום במערכת",
-  phone: "מספר הטלפון כבר רשום במערכת",
-  email: "כתובת הדוא״ל כבר רשומה במערכת",
-};
+/** SEC-A-14: הודעה אחידה — לא חושפת איזה נתון כבר קיים במערכת. */
+const DUPLICATE_MESSAGE = "לא ניתן לשמור את הפרט הזה. אם הוא שלך — פנו לתמיכה.";
 
 /**
  * שלב 3 — ההשלמה: יוצר בטרנזקציה אחת את הפרופיל/ים לפי התפקידים, הסניפים/הערוצים,
@@ -77,6 +75,45 @@ export async function completeRegistration(
     };
   }
   const { brand, creator, space } = parsed.data;
+
+  // אימות הפניות: slugs של קטגוריות (לפי scope) ומזהי ערים — אחרת FK/נתון תלוש → 500 או שיוך שגוי
+  {
+    const refErrors: Record<string, string> = {};
+    let refTab: "brand" | "creator" | "space" | undefined;
+    const validCities = await getValidCityIds();
+    if (brand) {
+      const slugs = new Set((await getPartnerCategoriesForScope("BRAND")).map((c) => c.slug));
+      if (!slugs.has(brand.category)) {
+        refErrors["brand.category"] = "קטגוריה לא תקינה";
+        refTab ??= "brand";
+      }
+      brand.locations.forEach((l, i) => {
+        if (!validCities.has(l.cityId)) {
+          refErrors[`brand.locations.${i}.cityId`] = "עיר לא תקינה";
+          refTab ??= "brand";
+        }
+      });
+    }
+    if (creator) {
+      const slugs = new Set((await getPartnerCategoriesForScope("CREATOR")).map((c) => c.slug));
+      if (creator.categories.some((c) => !slugs.has(c))) {
+        refErrors["creator.categories"] = "אחד מתחומי התוכן שנבחרו אינו תקין";
+        refTab ??= "creator";
+      }
+    }
+    if (space?.asset.cityId && !validCities.has(space.asset.cityId)) {
+      refErrors["space.asset.cityId"] = "עיר לא תקינה";
+      refTab ??= "space";
+    }
+    if (refTab) {
+      return {
+        status: "error",
+        formError: "יש לתקן את השדות המסומנים.",
+        fieldErrors: refErrors,
+        errorTab: refTab,
+      };
+    }
+  }
 
   const sortedKeys = sortRegistrationRoleKeys(user.roleKeys);
   const fullName =
@@ -143,18 +180,7 @@ export async function completeRegistration(
             billingAddress: creator.billingAddress,
           },
         });
-        // ערוצי סושיאל מחוברים דרך OAuth אחרי ההרשמה (עמוד הסיום / הגדרות), לא נקבעים כאן.
-        if (creator.channels.length > 0) {
-          await tx.creatorChannel.createMany({
-            data: creator.channels.map((c) => ({
-              creatorId: prof.id,
-              platform: c.platform,
-              handle: c.handle,
-              channelUrl: c.channelUrl,
-              followersCount: c.followersCount,
-            })),
-          });
-        }
+        // ערוצי סושיאל נוצרים רק דרך OAuth (עמוד הסיום / הגדרות) — לא מקבלים ערוצים/עוקבים מהלקוח.
         await tx.creatorCategory.createMany({
           data: creator.categories.map((slug) => ({ creatorId: prof.id, categorySlug: slug })),
         });
@@ -207,14 +233,9 @@ export async function completeRegistration(
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      const target = Array.isArray(e.meta?.target)
-        ? (e.meta.target as string[]).join(",")
-        : String(e.meta?.target ?? "");
-      const t = target.toLowerCase();
-      const key = Object.keys(P2002_MESSAGES).find((k) => t.includes(k.toLowerCase()));
       return {
         status: "error",
-        formError: key ? P2002_MESSAGES[key] : "חלק מהפרטים כבר רשומים במערכת.",
+        formError: DUPLICATE_MESSAGE,
         fieldErrors: {},
       };
     }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { prisma } from "@/lib/prisma";
 import { getCities } from "@/lib/cities";
 import { getPartnerCategoriesForScope } from "@/lib/partner-categories-query";
@@ -13,7 +12,7 @@ export const metadata: Metadata = { title: "הוספת נכס פרסום" };
 
 export default async function NewAdSpaceAssetPage() {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("space")) redirect("/dashboard");
+  requireRole(user, ["space"]);
 
   const [owner, cities, categories] = await Promise.all([
     prisma.adSpaceOwnerProfile.findUnique({ where: { userId: user.id }, select: { id: true } }),

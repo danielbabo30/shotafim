@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireActiveUser } from "@/lib/app-user";
+import { requireActiveUser, requireRole } from "@/lib/app-user";
 import { getAdSpaceSchedule } from "@/lib/ad-space-schedule";
 import { ScheduleGantt } from "@/components/app/ad-spaces/schedule-gantt";
 import { ChevronLeftIcon, ArrowIcon } from "@/components/marketing/icons";
@@ -21,7 +20,7 @@ export default async function BookingsPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const user = await requireActiveUser();
-  if (!user.roleKeys.includes("space")) redirect("/dashboard");
+  requireRole(user, ["space"]);
 
   const { month } = await searchParams;
   const data = await getAdSpaceSchedule(month);

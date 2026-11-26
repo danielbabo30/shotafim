@@ -80,6 +80,9 @@ export type PitchPrefill = {
   estimatedDeliveryDays: number;
   requestedStartDate: Date | null;
   requestedEndDate: Date | null;
+  /** הנכס שהמפרסם בחר בבקשת שריון (null להזמנת יוצר) */
+  adSpaceAssetId: string | null;
+  adSpaceAssetTitle: string | null;
 };
 
 export type CampaignDetail = {
@@ -90,6 +93,8 @@ export type CampaignDetail = {
   /** provider בלבד — ההצעה/הזמנה שלי לבריף הזה */
   myApplication: ApplicationView | null;
   canApply: boolean;
+  /** provider בלבד — יש הזמנה פתוחה שאפשר לדחות */
+  canDecline: boolean;
   /** provider בלבד — כשיש הזמנה (INVITED) פתוחה, ערכים למילוי מוקדם של טופס ההגשה */
   invitationPrefill: PitchPrefill | null;
 };
@@ -103,6 +108,7 @@ const applicantInclude = {
       creatorProfile: {
         select: {
           id: true,
+          displayName: true,
           verificationStatus: true,
           channels: { select: { platform: true, followersCount: true } },
         },
@@ -138,6 +144,7 @@ type RawApplicant = {
   image: string | null;
   creatorProfile: {
     id: string;
+    displayName: string;
     verificationStatus: "PENDING" | "VERIFIED" | "REJECTED";
     channels: { platform: string; followersCount: number }[];
   } | null;
@@ -156,7 +163,8 @@ function toApplicantSummary(a: RawApplicant): ApplicantSummary {
     return {
       userId: a.id,
       profileId: a.creatorProfile.id,
-      name: a.name ?? "יוצר",
+      // שם הבמה (כמו במרקטפלייס) — לא השם המשפטי מההרשמה
+      name: a.creatorProfile.displayName || (a.name ?? "יוצר"),
       image: a.image,
       kind: "creator",
       verified: a.creatorProfile.verificationStatus === "VERIFIED",
@@ -211,6 +219,12 @@ function toApplicationView(r: RawApplication): ApplicationView {
   };
 }
 
+function startOfToday(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
 export const getCampaignDetail = cache(
   async (campaignId: string): Promise<CampaignDetail | null> => {
     const user = await requireActiveUser();
@@ -257,6 +271,8 @@ export const getCampaignDetail = cache(
             createdAt: true,
             requestedStartDate: true,
             requestedEndDate: true,
+            adSpaceAssetId: true,
+            adSpaceAsset: { select: { title: true } },
             ...applicantInclude,
           },
         },
@@ -264,10 +280,25 @@ export const getCampaignDetail = cache(
     });
     if (!campaign) return null;
 
-    const isOwnerEarly = campaign.business.userId === user.id;
-    // בריף שאינו פתוח/פעיל גלוי רק לבעליו
-    if (!isOwnerEarly && (campaign.status === "DRAFT" || campaign.status === "CANCELLED")) {
-      return null;
+    const isOwner = campaign.business.userId === user.id;
+    const allowedTargets: CampaignTargetType[] = [
+      ...(user.roleKeys.includes("creator") ? (TARGET_TYPES_FOR_ROLE.CREATOR ?? []) : []),
+      ...(user.roleKeys.includes("space") ? (TARGET_TYPES_FOR_ROLE.AD_SPACE_OWNER ?? []) : []),
+    ];
+    const isProvider = !isOwner && allowedTargets.includes(campaign.targetType);
+
+    const views = campaign.applications.map((a) => toApplicationView(a as RawApplication));
+    const mine = views.find((v) => v.applicant.userId === user.id) ?? null;
+    const myRaw = campaign.applications.find((a) => a.applicant.id === user.id) ?? null;
+
+    // גישה: הבעלים; ספק מתאים לבריף פתוח; או מי שיש לו הצעה/הזמנה בבריף.
+    // כל השאר (מפרסם אחר, ספק לא מתאים, בריף סגור/טיוטה) — כמו "לא נמצא".
+    if (!isOwner) {
+      const visibleToProvider = isProvider && campaign.status === "OPEN_FOR_PITCHES";
+      if (!visibleToProvider && !mine) return null;
+      if (campaign.status === "DRAFT" || campaign.status === "CANCELLED") {
+        if (!mine) return null;
+      }
     }
 
     const brief: CampaignBrief = {
@@ -279,7 +310,8 @@ export const getCampaignDetail = cache(
       totalBudgetILS: Number(campaign.totalBudgetILS),
       endDate: campaign.endDate,
       status: campaign.status,
-      briefAssetsUrl: campaign.briefAssetsUrl,
+      // קישור חומרי הבריף חשוף רק לבעלים ולמי שהוזמן/הגיש הצעה
+      briefAssetsUrl: isOwner || mine ? campaign.briefAssetsUrl : null,
       hasPhysicalProduct: campaign.hasPhysicalProduct,
       compensationModel: campaign.compensationModel,
       partnerTerms: campaign.partnerTerms
@@ -308,26 +340,19 @@ export const getCampaignDetail = cache(
       createdAt: campaign.createdAt,
     };
 
-    const isOwner = campaign.business.userId === user.id;
-    const allowedTargets: CampaignTargetType[] = [
-      ...(user.roleKeys.includes("creator") ? (TARGET_TYPES_FOR_ROLE.CREATOR ?? []) : []),
-      ...(user.roleKeys.includes("space") ? (TARGET_TYPES_FOR_ROLE.AD_SPACE_OWNER ?? []) : []),
-    ];
-    const isProvider = !isOwner && allowedTargets.includes(campaign.targetType);
-
-    const views = campaign.applications.map((a) => toApplicationView(a as RawApplication));
-    const mine = views.find((v) => v.applicant.userId === user.id) ?? null;
-    const myRaw = campaign.applications.find((a) => a.applicant.id === user.id) ?? null;
     const isInvited = isProvider && mine?.status === "INVITED";
-    const isOpen = campaign.status === "OPEN_FOR_PITCHES";
+    const endDatePassed = campaign.endDate != null && campaign.endDate.getTime() < startOfToday();
+    const isOpen = campaign.status === "OPEN_FOR_PITCHES" && !endDatePassed;
 
     return {
       brief,
       viewer: isOwner ? "owner" : isProvider ? "provider" : "other",
       applications: isOwner ? views : [],
       myApplication: isProvider ? mine : null,
-      // אפשר להגיש כשאין הצעה קיימת, או כשקיימת הזמנה (INVITED) שממתינה למילוי
-      canApply: isProvider && isOpen && (!mine || mine.status === "INVITED"),
+      // אפשר להגיש כשאין הצעה קיימת, כשקיימת הזמנה (INVITED), או אחרי ביטול (WITHDRAWN)
+      canApply:
+        isProvider && isOpen && (!mine || mine.status === "INVITED" || mine.status === "WITHDRAWN"),
+      canDecline: isInvited,
       invitationPrefill:
         isInvited && myRaw
           ? {
@@ -335,6 +360,8 @@ export const getCampaignDetail = cache(
               estimatedDeliveryDays: myRaw.estimatedDeliveryDays,
               requestedStartDate: myRaw.requestedStartDate,
               requestedEndDate: myRaw.requestedEndDate,
+              adSpaceAssetId: myRaw.adSpaceAssetId,
+              adSpaceAssetTitle: myRaw.adSpaceAsset?.title ?? null,
             }
           : null,
     };
@@ -419,8 +446,11 @@ export const listDiscoverCampaigns = cache(async () => {
     where: {
       status: "OPEN_FOR_PITCHES",
       targetType: { in: [...new Set(allowed)] },
-      applications: { none: { applicantId: user.id } },
+      // הצעה שבוטלה (WITHDRAWN) לא מסתירה את הבריף — אפשר להגיש מחדש
+      applications: { none: { applicantId: user.id, status: { not: "WITHDRAWN" } } },
       business: { userId: { not: user.id } }, // לא להציג בריף של עצמך
+      // בריף שעבר תאריך הסיום שלו לא נחשף יותר להצעות
+      OR: [{ endDate: null }, { endDate: { gte: new Date(startOfToday()) } }],
     },
     orderBy: { createdAt: "desc" },
     select: {

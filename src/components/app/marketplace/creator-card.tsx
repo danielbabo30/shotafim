@@ -24,9 +24,18 @@ export function CreatorCard({
     <article className="border-outline-variant bg-surface-lowest shadow-ambient-sm hover:shadow-ambient flex flex-col gap-4 rounded-xl border p-6 transition-shadow">
       <div className="flex items-start gap-4">
         <div className="relative shrink-0">
-          <span className="bg-primary-fixed text-on-primary-fixed font-display grid size-16 place-items-center rounded-full text-xl font-bold">
-            {initial}
-          </span>
+          {creator.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={creator.avatarUrl}
+              alt={creator.displayName}
+              className="size-16 rounded-full object-cover"
+            />
+          ) : (
+            <span className="bg-primary-fixed text-on-primary-fixed font-display grid size-16 place-items-center rounded-full text-xl font-bold">
+              {initial}
+            </span>
+          )}
           {creator.verified && (
             <VerifiedIcon className="text-primary bg-surface-lowest absolute -start-1 -bottom-1 size-5 rounded-full" />
           )}
@@ -63,16 +72,26 @@ export function CreatorCard({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-on-surface-variant text-xs">החל מ-</span>
-          <span className="text-on-surface font-bold">
-            ₪{creator.startingPriceILS.toLocaleString("en-US")} {creator.priceUnitLabel}
-          </span>
+          {creator.startingPriceILS > 0 ? (
+            <>
+              <span className="text-on-surface-variant text-xs">החל מ-</span>
+              <span className="text-on-surface font-bold">
+                ₪{creator.startingPriceILS.toLocaleString("en-US")} {creator.priceUnitLabel}
+              </span>
+            </>
+          ) : (
+            <span className="text-on-surface-variant text-sm">טרם הוגדרו חבילות מחיר</span>
+          )}
         </div>
-        <div className="text-on-surface flex items-center gap-1 text-sm font-medium">
-          <StarIcon className="size-4 text-amber-400" />
-          <span>{creator.rating.toFixed(1)}</span>
-          <span className="text-on-surface-variant">({creator.reviewCount} מותגים)</span>
-        </div>
+        {creator.reviewCount > 0 ? (
+          <div className="text-on-surface flex items-center gap-1 text-sm font-medium">
+            <StarIcon className="size-4 text-amber-400" />
+            <span>{creator.rating.toFixed(1)}</span>
+            <span className="text-on-surface-variant">({creator.reviewCount} מותגים)</span>
+          </div>
+        ) : (
+          <span className="text-on-surface-variant text-sm">יוצר חדש · אין ביקורות</span>
+        )}
       </div>
 
       <div className="mt-auto flex flex-col gap-2 pt-1 sm:flex-row">
