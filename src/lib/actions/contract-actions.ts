@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, type MediaFileType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/app-user";
+import { arePaymentsEnabled, paymentsBlockedState } from "@/lib/payments-gate";
 import { storage } from "@/lib/storage";
 import {
   MAX_UPLOAD_BYTES,
@@ -70,6 +71,7 @@ export async function fundEscrow(
   _prev: ContractActionState,
   formData: FormData,
 ): Promise<ContractActionState> {
+  if (!arePaymentsEnabled()) return paymentsBlockedState();
   const contractId = String(formData.get("contractId") ?? "");
   const owned = await loadOwnedContract(contractId);
   if (!owned) return { status: "error", message: "החוזה לא נמצא או אינו שייך לחשבון זה." };
@@ -231,6 +233,7 @@ export async function approveAndRelease(
   _prev: ContractActionState,
   formData: FormData,
 ): Promise<ContractActionState> {
+  if (!arePaymentsEnabled()) return paymentsBlockedState();
   const contractId = String(formData.get("contractId") ?? "");
   const owned = await loadOwnedContract(contractId);
   if (!owned) return { status: "error", message: "החוזה לא נמצא או אינו שייך לחשבון זה." };

@@ -9,6 +9,7 @@ import {
 import { KpiCard } from "@/components/app/dashboard/kpi-card";
 import { BroadcastCard } from "@/components/app/dashboard/space/broadcast-card";
 import { OccupancyCalendar } from "@/components/app/dashboard/space/occupancy-calendar";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { getSpaceDashboardData, formatShekels } from "@/lib/dashboard-space";
 import type { AppUser } from "@/lib/app-user";
 
@@ -16,12 +17,13 @@ import type { AppUser } from "@/lib/app-user";
 export async function SpaceDashboard({ user }: { user: AppUser }) {
   const { company, kpis, broadcasts, calendar } = await getSpaceDashboardData(user.id);
 
+  const showPayments = arePaymentsEnabled();
   const headline = company ? `ניהול שטחי פרסום · ${company}` : "ניהול שטחי פרסום";
   const subtitle =
     kpis.proofsPending > 0
       ? `תפוסת השטחים השבוע עומדת על ${kpis.occupancyPct}%. יש ${kpis.proofsPending} ${
           kpis.proofsPending === 1 ? "הוכחת שידור" : "הוכחות שידור"
-        } להעלאה לשחרור כספי נאמנות.`
+        } להעלאה${showPayments ? " לשחרור כספי נאמנות" : ""}.`
       : `תפוסת השטחים השבוע עומדת על ${kpis.occupancyPct}%. אין הוכחות שידור שממתינות לך.`;
 
   return (
@@ -46,25 +48,29 @@ export async function SpaceDashboard({ user }: { user: AppUser }) {
 
       {/* רצועת KPI */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          icon={<LockIcon className="size-5" />}
-          iconTone="primary"
-          accent
-          href="/dashboard/contracts"
-          label="נעול בנאמנות (קרובים)"
-          value={formatShekels(kpis.escrowUpcoming)}
-          badge={{ label: `${kpis.escrowUpcomingDeals} עסקאות בנאמנות`, tone: "primary" }}
-        />
-        <KpiCard
-          icon={<CheckCircleIcon className="size-5" />}
-          iconTone="success"
-          href="/dashboard/contracts"
-          label="זמין למשיכה (אושר)"
-          value={formatShekels(kpis.availableToWithdraw)}
-          badge={
-            kpis.availableToWithdraw > 0 ? { label: "שוחרר לארנק", tone: "success" } : undefined
-          }
-        />
+        {showPayments && (
+          <>
+            <KpiCard
+              icon={<LockIcon className="size-5" />}
+              iconTone="primary"
+              accent
+              href="/dashboard/contracts"
+              label="נעול בנאמנות (קרובים)"
+              value={formatShekels(kpis.escrowUpcoming)}
+              badge={{ label: `${kpis.escrowUpcomingDeals} עסקאות בנאמנות`, tone: "primary" }}
+            />
+            <KpiCard
+              icon={<CheckCircleIcon className="size-5" />}
+              iconTone="success"
+              href="/dashboard/contracts"
+              label="זמין למשיכה (אושר)"
+              value={formatShekels(kpis.availableToWithdraw)}
+              badge={
+                kpis.availableToWithdraw > 0 ? { label: "שוחרר לארנק", tone: "success" } : undefined
+              }
+            />
+          </>
+        )}
         <KpiCard
           icon={<DevicesIcon className="size-5" />}
           iconTone="warning"

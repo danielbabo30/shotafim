@@ -56,6 +56,15 @@ const schema = z.object({
   STORAGE_DRIVER: z.enum(["local", "gcs", "blob"]).default("local"),
   // שם ה-bucket הפרטי ב-Cloud Storage — חובה כש-STORAGE_DRIVER=gcs.
   GCS_BUCKET: z.string().optional(),
+
+  // מצב POC: כשהדגל false — כל ממשקי/פעולות הכסף (נאמנות, משיכה, חשבוניות, פיקדון) מוסתרים
+  // ונחסמים בשרת; התשלום מתבצע מחוץ למערכת. ברירת מחדל true (התנהגות פיתוח).
+  PAYMENTS_UI_ENABLED: z
+    .string()
+    .optional()
+    .transform(
+      (v) => v === undefined || v === "" || !["false", "0", "off", "no"].includes(v.toLowerCase()),
+    ),
 });
 
 const parsed = schema
@@ -118,3 +127,6 @@ export const hasYouTubeOAuth = Boolean(
 export const hasFacebookOAuth = Boolean(
   env.FACEBOOK_OAUTH_CLIENT_ID && env.FACEBOOK_OAUTH_CLIENT_SECRET,
 );
+
+/** האם ממשקי הכסף (נאמנות/משיכה/חשבוניות/פיקדון) פעילים. false = מצב POC, תשלום מחוץ למערכת. */
+export const paymentsUiEnabled = env.PAYMENTS_UI_ENABLED;

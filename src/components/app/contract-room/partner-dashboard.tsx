@@ -13,7 +13,13 @@ import { PluginDownloadCard } from "@/components/app/plugin/plugin-download-card
  * שני הצדדים רואים את אותם מספרים. סיבלינג לפאנל ההקמה/פיקדון של WP-2.
  * מוחזר null כשלחוזה אין PartnerProgram (הפאנל הרגיל מטפל).
  */
-export async function PartnerDashboard({ contractId }: { contractId: string }) {
+export async function PartnerDashboard({
+  contractId,
+  paymentsEnabled = true,
+}: {
+  contractId: string;
+  paymentsEnabled?: boolean;
+}) {
   const data = await getPartnerDashboard(contractId);
   if (!data) return null;
 
@@ -22,11 +28,13 @@ export async function PartnerDashboard({ contractId }: { contractId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <PartnerMetrics data={data} />
+      <PartnerMetrics data={data} paymentsEnabled={paymentsEnabled} />
 
       {data.hasLink && <PartnerClicksChart series={data.clickSeries} />}
 
-      <PartnerCheckpoints nextCheckpoint={data.nextCheckpoint} checkpoints={data.checkpoints} />
+      {paymentsEnabled && (
+        <PartnerCheckpoints nextCheckpoint={data.nextCheckpoint} checkpoints={data.checkpoints} />
+      )}
 
       {/* צד המפרסם: תוסף המעקב מפעיל את חיבור החנות ואת מדידת הרכישות (WP-4) */}
       {isBrand && <PluginDownloadCard />}

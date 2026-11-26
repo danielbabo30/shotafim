@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { CampaignStatus, TransactionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { pluralHe } from "@/lib/plural";
 
 /**
  * נתוני לוח-הבקרה של המפרסם — נתונים אמיתיים מ-Prisma (ראה CLAUDE.md §"האזור האישי").
@@ -160,7 +161,7 @@ export const getBrandDashboardData = cache(
       const budget = formatShekels(Number(c.totalBudgetILS));
       const openish = c.status === "OPEN_FOR_PITCHES" || c.status === "DRAFT";
       const meta = openish
-        ? `${c._count.applications} הצעות • תקציב: ${budget}`
+        ? `${pluralHe(c._count.applications, "הצעה אחת", "הצעות")} • תקציב: ${budget}`
         : `${c._count.contracts} ${c._count.contracts === 1 ? "ספק" : "ספקים"} • תקציב: ${budget}`;
       return {
         id: c.id,

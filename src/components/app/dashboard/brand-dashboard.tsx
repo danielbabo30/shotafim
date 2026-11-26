@@ -10,11 +10,13 @@ import { CampaignList } from "@/components/app/dashboard/campaign-list";
 import { EscrowLedger } from "@/components/app/dashboard/escrow-ledger";
 import { RosterCta } from "@/components/app/dashboard/roster-cta";
 import { getBrandDashboardData, formatShekels } from "@/lib/dashboard-brand";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import type { AppUser } from "@/lib/app-user";
 
 /** לוח-הבקרה של המפרסם (כובע "מותג") */
 export async function BrandDashboard({ user }: { user: AppUser }) {
   const { kpis, campaigns, ledger } = await getBrandDashboardData(user.id);
+  const showPayments = arePaymentsEnabled();
 
   return (
     <div className="flex flex-col gap-8">
@@ -22,15 +24,17 @@ export async function BrandDashboard({ user }: { user: AppUser }) {
 
       {/* רצועת KPI */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          icon={<ShieldCheckIcon className="size-5" />}
-          iconTone="primary"
-          accent
-          href="/dashboard/reports"
-          label="תקציב נעול בנאמנות (Escrow)"
-          value={formatShekels(kpis.escrowLocked)}
-          badge={{ label: `${kpis.escrowDeals} עסקאות מוגנות`, tone: "primary" }}
-        />
+        {showPayments && (
+          <KpiCard
+            icon={<ShieldCheckIcon className="size-5" />}
+            iconTone="primary"
+            accent
+            href="/dashboard/reports"
+            label="תקציב נעול בנאמנות (Escrow)"
+            value={formatShekels(kpis.escrowLocked)}
+            badge={{ label: `${kpis.escrowDeals} עסקאות מוגנות`, tone: "primary" }}
+          />
+        )}
         <KpiCard
           icon={<MegaphoneIcon className="size-5" />}
           href="/dashboard/campaigns"
@@ -63,7 +67,7 @@ export async function BrandDashboard({ user }: { user: AppUser }) {
           <CampaignList campaigns={campaigns} />
         </div>
         <div className="flex flex-col gap-6 lg:col-span-4">
-          <EscrowLedger entries={ledger} />
+          {showPayments && <EscrowLedger entries={ledger} />}
           <RosterCta />
         </div>
       </div>

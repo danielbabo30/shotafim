@@ -33,6 +33,8 @@ export type NavItem = {
   icon: NavIconKey;
   /** התאמה מדויקת בלבד (לשורש /dashboard, כדי שלא יידלק לכל תת-נתיב) */
   exact?: boolean;
+  /** פריט כספי — מוסתר כש-PAYMENTS_UI_ENABLED=false (מצב POC) */
+  payments?: boolean;
 };
 
 export type RoleMeta = {
@@ -71,7 +73,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
       { href: "/dashboard/applications", label: "פניות והצעות", icon: "inbox" },
       { href: "/dashboard/contracts", label: "חוזים", icon: "contract" },
       { href: "/dashboard/messages", label: "הודעות", icon: "chat" },
-      { href: "/dashboard/reports", label: "דוחות", icon: "chart" },
+      { href: "/dashboard/reports", label: "דוחות", icon: "chart", payments: true },
     ],
   },
   creator: {
@@ -88,7 +90,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
       { href: "/dashboard/applications", label: "ההצעות שלי", icon: "inbox" },
       { href: "/dashboard/contracts", label: "חוזים", icon: "contract" },
       { href: "/dashboard/messages", label: "הודעות", icon: "chat" },
-      { href: "/dashboard/earnings", label: "הכנסות", icon: "wallet" },
+      { href: "/dashboard/earnings", label: "הכנסות", icon: "wallet", payments: true },
     ],
   },
   space: {
@@ -118,7 +120,7 @@ export const ROLE_META: Record<RoleKey, RoleMeta> = {
     nav: [
       DASHBOARD,
       { href: "/dashboard/disputes", label: "מחלוקות", icon: "gavel" },
-      { href: "/dashboard/reports", label: "דוחות מערכת", icon: "chart" },
+      { href: "/dashboard/reports", label: "דוחות מערכת", icon: "chart", payments: true },
     ],
   },
 };

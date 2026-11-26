@@ -71,6 +71,7 @@ export function ConversationList({
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="חיפוש הודעות..."
+            aria-label="חיפוש הודעות"
             className="border-outline-variant bg-surface-low text-on-surface placeholder:text-on-surface-variant focus:outline-primary w-full rounded-lg border py-2 ps-3 pe-9 text-sm focus:outline-2"
           />
         </div>

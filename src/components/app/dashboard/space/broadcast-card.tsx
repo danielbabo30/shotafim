@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { cn } from "@/lib/cn";
 import {
   LockIcon,
@@ -65,7 +66,7 @@ export function BroadcastCard({ item }: { item: BroadcastCardVM }) {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="bg-success-container/60 text-success inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
             <CheckCircleIcon className="size-4" />
-            שידור אושר וכסף שוחרר לארנק
+            שידור אושר{arePaymentsEnabled() ? " וכסף שוחרר לארנק" : ""}
           </div>
           <Link
             href={contractHref}
@@ -78,13 +79,17 @@ export function BroadcastCard({ item }: { item: BroadcastCardVM }) {
       ) : (
         <>
           <div className="bg-surface-low border-outline-variant mt-4 flex items-center gap-3 rounded-lg border p-3">
-            <LockIcon className="text-primary size-5 shrink-0" />
-            <div>
-              <div className="text-on-surface-variant text-xs">סטטוס נאמנות (Escrow)</div>
-              <div className="text-primary text-sm font-bold">
-                {formatShekels(item.escrowAmount)} נעולים בנאמנות
-              </div>
-            </div>
+            {arePaymentsEnabled() && (
+              <>
+                <LockIcon className="text-primary size-5 shrink-0" />
+                <div>
+                  <div className="text-on-surface-variant text-xs">סטטוס נאמנות (Escrow)</div>
+                  <div className="text-primary text-sm font-bold">
+                    {formatShekels(item.escrowAmount)} נעולים בנאמנות
+                  </div>
+                </div>
+              </>
+            )}
             {STATE_CHIP[item.state] && (
               <StatusChip tone={STATE_CHIP[item.state]!.tone} className="ms-auto">
                 {STATE_CHIP[item.state]!.label}

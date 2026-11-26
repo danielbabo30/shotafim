@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 
 /**
  * נתוני מרכז ההודעות של האזור האישי — רשימת שיחות + ה-thread המלא של כל אחת.
@@ -19,6 +20,8 @@ export type ConversationContext = {
   workspaceHref?: string;
   /** סכום נעול בנאמנות, ש״ח (רק kind === "contract") */
   escrowAmountILS?: number;
+  /** false במצב POC — לא מציגים צ'יפ נאמנות */
+  showEscrow?: boolean;
 };
 
 export type MessageAttachmentKind = "video" | "image" | "document";
@@ -168,6 +171,7 @@ export const getMessagesData = cache(async (userId: string): Promise<MessagesDat
           kind: "contract",
           label: conv.contract.campaign.title,
           workspaceHref: `/dashboard/contracts/${conv.contract.id}`,
+          showEscrow: arePaymentsEnabled(),
           escrowAmountILS: Number(
             conv.contract.escrowHold?.amountILS ??
               Number(conv.contract.agreedPriceILS) + Number(conv.contract.platformFeeILS),

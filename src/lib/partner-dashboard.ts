@@ -1,3 +1,4 @@
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import "server-only";
 import { cache } from "react";
 import type {
@@ -304,8 +305,10 @@ export const getPartnerDashboard = cache(
         });
       }
     }
+    // מצב POC: אירועי תשלום/פיקדון (נאמנות) לא מוצגים ביומן
+    const showMoneyEvents = arePaymentsEnabled();
     for (const c of checkpointRows) {
-      if (c.status === "PAID" && c.paidAt) {
+      if (showMoneyEvents && c.status === "PAID" && c.paidAt) {
         journal.push({
           id: `cp-${c.id}`,
           at: c.paidAt,
@@ -314,7 +317,7 @@ export const getPartnerDashboard = cache(
         });
       }
     }
-    for (const t of depositTxns) {
+    for (const t of showMoneyEvents ? depositTxns : []) {
       journal.push({
         id: `dep-${t.id}`,
         at: t.createdAt,
@@ -322,7 +325,7 @@ export const getPartnerDashboard = cache(
         tone: "success",
       });
     }
-    for (const t of payoutTxns) {
+    for (const t of showMoneyEvents ? payoutTxns : []) {
       journal.push({
         id: `pay-${t.id}`,
         at: t.createdAt,

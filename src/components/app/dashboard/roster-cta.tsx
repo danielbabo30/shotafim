@@ -16,11 +16,11 @@ export function RosterCta() {
         בנו מאגר יוצרים מועדפים לגישה מהירה בקמפיינים עתידיים.
       </p>
       <Link
-        href="/dashboard/roster/invite"
+        href="/dashboard/roster/invite" // -404: היעד לא קיים (VIS-03)
         className="bg-primary text-on-primary hover:bg-primary-hover shadow-ambient-sm relative inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors"
       >
         <UsersIcon className="size-4" />
-        הזמנה עכשיו
+        הזמנה עכשיו-404
       </Link>
     </section>
   );

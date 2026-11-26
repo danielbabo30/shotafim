@@ -66,7 +66,7 @@ export function MessageThread({
                 מחובר/ת
               </>
             ) : (
-              conversation.handle
+              <bdi dir="ltr">{conversation.handle}</bdi>
             )}
           </p>
         </div>

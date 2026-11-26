@@ -11,7 +11,7 @@ export function CampaignList({ campaigns }: { campaigns: CampaignRow[] }) {
         <h2 className="font-display text-on-surface text-xl font-bold">קמפיינים ובריפים פעילים</h2>
         <Link
           href="/dashboard/campaigns/new"
-          className="text-primary hover:text-primary-hover flex items-center gap-1 text-sm font-semibold transition-colors"
+          className="text-primary hover:text-primary-hover flex min-h-11 items-center gap-1 text-sm font-semibold transition-colors"
         >
           <PlusIcon className="size-4" />
           בריף חדש

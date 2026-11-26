@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { effectiveReliabilityScore } from "@/lib/reliability";
 import { requireActiveUser } from "@/lib/app-user";
 import { formatShekels } from "@/lib/dashboard-brand";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { deliverableLabel } from "@/lib/campaign-brief";
 import { getPartnerCategoryLabels } from "@/lib/partner-categories-query";
 
@@ -110,7 +111,7 @@ function toContractVM(c: ContractRow, now: Date): CreatorContractVM {
 
   if (c.status === "AWAITING_ESCROW" || !escrowFunded) {
     step = 1;
-    stepHint = "ממתין להפקדה לנאמנות";
+    stepHint = arePaymentsEnabled() ? "ממתין להפקדה לנאמנות" : "ממתין להתחלת עבודה";
     cta = room;
   } else if (c.status === "SUBMITTED_FOR_REVIEW" || latest?.status === "PENDING_REVIEW") {
     step = 3;
@@ -281,7 +282,7 @@ export const getCreatorDashboardData = cache(async (): Promise<CreatorDashboardD
   if (draftsToUpload > 0) {
     hintParts.push(`${draftsToUpload} ${draftsToUpload === 1 ? "סקיצה להגשה" : "סקיצות להגשה"}`);
   }
-  if (escrowGuaranteed > 0) {
+  if (escrowGuaranteed > 0 && arePaymentsEnabled()) {
     hintParts.push(`${formatShekels(escrowGuaranteed)} נעולים בנאמנות שממתינים לשחרור`);
   }
   const headlineHint =

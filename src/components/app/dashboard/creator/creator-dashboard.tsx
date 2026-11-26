@@ -11,11 +11,13 @@ import { DashboardHeader } from "@/components/app/dashboard/dashboard-header";
 import { KpiCard } from "@/components/app/dashboard/kpi-card";
 import { ContractProgressCard } from "@/components/app/dashboard/creator/contract-progress-card";
 import { BriefMiniCard } from "@/components/app/dashboard/creator/brief-mini-card";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { getCreatorDashboardData, formatShekels } from "@/lib/dashboard-creator";
 
 /** לוח-הבקרה של היוצר (כובע "יוצר תוכן") */
 export async function CreatorDashboard() {
   const { name, headlineHint, kpis, contracts, briefs } = await getCreatorDashboardData();
+  const showPayments = arePaymentsEnabled();
 
   return (
     <div className="flex flex-col gap-8">
@@ -23,36 +25,42 @@ export async function CreatorDashboard() {
         name={name}
         subtitle={headlineHint}
         action={
-          <Link
-            href="/dashboard/earnings"
-            className="bg-primary text-on-primary hover:bg-primary-hover shadow-ambient-sm inline-flex h-11 items-center gap-2 self-start rounded-lg px-5 text-sm font-semibold transition-colors"
-          >
-            <WalletIcon className="size-4" />
-            משיכת כספים לחשבון הבנק
-          </Link>
+          showPayments ? (
+            <Link
+              href="/dashboard/earnings"
+              className="bg-primary text-on-primary hover:bg-primary-hover shadow-ambient-sm inline-flex h-11 items-center gap-2 self-start rounded-lg px-5 text-sm font-semibold transition-colors"
+            >
+              <WalletIcon className="size-4" />
+              משיכת כספים לחשבון הבנק
+            </Link>
+          ) : undefined
         }
       />
 
       {/* רצועת KPI */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          icon={<WalletIcon className="size-5" />}
-          iconTone="success"
-          href="/dashboard/contracts"
-          label="זמין למשיכה מיידית"
-          value={formatShekels(kpis.availableToWithdraw)}
-          badge={
-            kpis.availableToWithdraw > 0 ? { label: "מוכן למשיכה", tone: "success" } : undefined
-          }
-        />
-        <KpiCard
-          icon={<LockIcon className="size-5" />}
-          iconTone="primary"
-          accent
-          href="/dashboard/contracts"
-          label="מובטח בנאמנות (Escrow)"
-          value={formatShekels(kpis.escrowGuaranteed)}
-        />
+        {showPayments && (
+          <>
+            <KpiCard
+              icon={<WalletIcon className="size-5" />}
+              iconTone="success"
+              href="/dashboard/contracts"
+              label="זמין למשיכה מיידית"
+              value={formatShekels(kpis.availableToWithdraw)}
+              badge={
+                kpis.availableToWithdraw > 0 ? { label: "מוכן למשיכה", tone: "success" } : undefined
+              }
+            />
+            <KpiCard
+              icon={<LockIcon className="size-5" />}
+              iconTone="primary"
+              accent
+              href="/dashboard/contracts"
+              label="מובטח בנאמנות (Escrow)"
+              value={formatShekels(kpis.escrowGuaranteed)}
+            />
+          </>
+        )}
         <KpiCard
           icon={<SendIcon className="size-5" />}
           iconTone="warning"

@@ -93,6 +93,7 @@ export function MessageComposer({
             }
           }}
           placeholder="כתוב הודעה..."
+          aria-label="תוכן ההודעה"
           className="text-on-surface placeholder:text-on-surface-variant max-h-32 min-h-[2.5rem] flex-1 resize-none bg-transparent py-2 text-sm focus:outline-none"
         />
 

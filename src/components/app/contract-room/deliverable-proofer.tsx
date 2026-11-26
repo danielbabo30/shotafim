@@ -19,6 +19,51 @@ import {
 
 const shortDate = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long" });
 
+/** תצוגת תמונה עם fallback: תמונה שבורה או זעירה (למשל 1x1) לא נמתחת לריבוע ריק אלא מציגה קישור לקובץ */
+function ImagePreview({
+  src,
+  alt,
+  fileName,
+}: {
+  src: string;
+  alt: string;
+  fileName: string | null;
+}) {
+  const [unusable, setUnusable] = useState(false);
+  if (unusable) {
+    return (
+      <div className="bg-surface-container flex flex-col items-center gap-3 p-10 text-center">
+        <DocumentIcon className="text-on-surface-variant size-12" />
+        <p className="text-on-surface text-sm font-medium">{fileName ?? "קובץ התוצר"}</p>
+        <p className="text-on-surface-variant text-xs">אין תצוגה מקדימה זמינה לקובץ הזה.</p>
+        <a
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+          className="bg-primary text-on-primary hover:bg-primary-hover inline-flex min-h-11 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+        >
+          <DownloadIcon className="size-4" />
+          פתיחה / הורדה
+        </a>
+      </div>
+    );
+  }
+  return (
+    // תוצר פרטי בממדים שרירותיים, מוגש דרך route מאומת — next/image לא רלוונטי כאן
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setUnusable(true)}
+      onLoad={(e) => {
+        const { naturalWidth, naturalHeight } = e.currentTarget;
+        if (naturalWidth < 16 || naturalHeight < 16) setUnusable(true);
+      }}
+      className="bg-surface-container max-h-[28rem] w-full object-contain"
+    />
+  );
+}
+
 export function DeliverableProofer({
   contractId,
   submissions,
@@ -80,13 +125,11 @@ export function DeliverableProofer({
           className="bg-inverse-surface aspect-video w-full"
         />
       ) : kind === "image" ? (
-        // תוצר פרטי בממדים שרירותיים, מוגש דרך route מאומת — next/image לא רלוונטי כאן
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <ImagePreview
           key={active.id}
           src={active.fileUrl}
           alt={`תוצר גרסה v${active.version}`}
-          className="bg-surface-container max-h-[28rem] w-full object-contain"
+          fileName={active.fileName}
         />
       ) : (
         <div className="bg-surface-container flex flex-col items-center gap-3 p-10 text-center">
@@ -284,6 +327,7 @@ function SubmitDeliverableForm({
             key="file"
             name="file"
             type="file"
+            aria-label="קובץ להגשה"
             required
             accept={UPLOAD_ACCEPT}
             className={cn(
@@ -309,6 +353,7 @@ function SubmitDeliverableForm({
 
       <textarea
         name="notes"
+        aria-label="הערות להגשה"
         rows={2}
         placeholder="הערות להגשה (אופציונלי) — מה שונה מהגרסה הקודמת…"
         className={inputCls}

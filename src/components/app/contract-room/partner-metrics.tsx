@@ -35,7 +35,13 @@ function Tile({
 }
 
 /** רצועת מדדי הביצוע של השותפות — משותפת ליוצר ולמפרסם (§8) */
-export function PartnerMetrics({ data }: { data: PartnerDashboardData }) {
+export function PartnerMetrics({
+  data,
+  paymentsEnabled = true,
+}: {
+  data: PartnerDashboardData;
+  paymentsEnabled?: boolean;
+}) {
   const { metrics: m, hasLink } = data;
   const isBrand = data.viewerParty === "brand";
 
@@ -66,7 +72,9 @@ export function PartnerMetrics({ data }: { data: PartnerDashboardData }) {
         <Tile label="הכנסה שהניב" value={nis(m.grossRevenue)} tone="neutral" />
         <Tile label="עמלה ממתינה" value={nis(m.commissionPending)} tone="warning" />
         <Tile label="עמלה מאושרת" value={nis(m.commissionApproved)} tone="primary" />
-        <Tile label="עמלה ששולמה" value={nis(m.commissionPaid)} tone="success" />
+        {paymentsEnabled && (
+          <Tile label="עמלה ששולמה" value={nis(m.commissionPaid)} tone="success" />
+        )}
         {m.commissionOnHold > 0 && (
           <Tile label="עמלה בעצירה" value={nis(m.commissionOnHold)} tone="warning" />
         )}

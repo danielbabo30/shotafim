@@ -2,7 +2,8 @@
 
 import { useActionState, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { BoltIcon, LinkIcon, PriceTagIcon } from "@/components/marketing/icons";
+import { BoltIcon, InfoIcon, LinkIcon, PriceTagIcon } from "@/components/marketing/icons";
+import { POC_PAYMENT_NOTICE } from "@/lib/payments-notice";
 import { CONTRACT_ACTION_INITIAL } from "@/lib/contract-room";
 import {
   fundPartnerDeposit,
@@ -43,7 +44,13 @@ const feedbackClass = (status: string) =>
       : "bg-error-container text-on-error-container",
   );
 
-export function PartnerProgramPanel({ program }: { program: PartnerProgramView }) {
+export function PartnerProgramPanel({
+  program,
+  paymentsEnabled = true,
+}: {
+  program: PartnerProgramView;
+  paymentsEnabled?: boolean;
+}) {
   const isBrand = program.viewerParty === "brand";
   const live = program.status === "ACTIVE" || program.status === "GATE_80";
   const commissionText =
@@ -60,7 +67,7 @@ export function PartnerProgramPanel({ program }: { program: PartnerProgramView }
           <h2 className="text-on-surface text-sm font-semibold">שותפות — תשלום פר רכישה</h2>
         </div>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", status.className)}>
-          {status.label}
+          {!paymentsEnabled && program.status === "PENDING_DEPOSIT" ? "ממתין להפעלה" : status.label}
         </span>
       </div>
 
@@ -76,39 +83,46 @@ export function PartnerProgramPanel({ program }: { program: PartnerProgramView }
         <Row term="סיום" detail={dateFmt.format(program.endDate)} />
       </dl>
 
-      {/* פיקדון + ניצול */}
-      <div className="border-outline-variant bg-surface-container flex flex-col gap-2 rounded-lg border p-4">
-        <div className="flex items-baseline justify-between">
-          <span className="text-on-surface-variant text-xs">
-            {program.depositFunded ? "נוצל מהפיקדון" : "פיקדון נדרש"}
-          </span>
-          <span className="text-on-surface text-lg font-bold">
-            {program.depositFunded
-              ? `${currency.format(program.drainedILS)} / ${currency.format(program.depositILS)}`
-              : currency.format(program.requiredDepositILS)}
-          </span>
-        </div>
-        {program.depositFunded && (
-          <>
-            <div className="bg-surface-lowest h-2 overflow-hidden rounded-full">
-              <div
-                className={cn(
-                  "h-full rounded-full",
-                  program.utilizationPct >= 100
-                    ? "bg-error"
-                    : program.utilizationPct >= 80
-                      ? "bg-warning"
-                      : "bg-primary",
-                )}
-                style={{ width: `${Math.min(100, program.utilizationPct)}%` }}
-              />
-            </div>
+      {/* פיקדון + ניצול — מוסתר במצב POC */}
+      {paymentsEnabled ? (
+        <div className="border-outline-variant bg-surface-container flex flex-col gap-2 rounded-lg border p-4">
+          <div className="flex items-baseline justify-between">
             <span className="text-on-surface-variant text-xs">
-              {program.utilizationPct}% ניצול · הפיקדון מנוקז לפי עמלות מאושרות
+              {program.depositFunded ? "נוצל מהפיקדון" : "פיקדון נדרש"}
             </span>
-          </>
-        )}
-      </div>
+            <span className="text-on-surface text-lg font-bold">
+              {program.depositFunded
+                ? `${currency.format(program.drainedILS)} / ${currency.format(program.depositILS)}`
+                : currency.format(program.requiredDepositILS)}
+            </span>
+          </div>
+          {program.depositFunded && (
+            <>
+              <div className="bg-surface-lowest h-2 overflow-hidden rounded-full">
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    program.utilizationPct >= 100
+                      ? "bg-error"
+                      : program.utilizationPct >= 80
+                        ? "bg-warning"
+                        : "bg-primary",
+                  )}
+                  style={{ width: `${Math.min(100, program.utilizationPct)}%` }}
+                />
+              </div>
+              <span className="text-on-surface-variant text-xs">
+                {program.utilizationPct}% ניצול · הפיקדון מנוקז לפי עמלות מאושרות
+              </span>
+            </>
+          )}
+        </div>
+      ) : (
+        <p className="border-outline-variant bg-surface-container text-on-surface-variant flex items-start gap-2 rounded-lg border p-4 text-sm leading-relaxed">
+          <InfoIcon className="mt-0.5 size-4 shrink-0" />
+          {POC_PAYMENT_NOTICE}
+        </p>
+      )}
 
       {/* לינק / קופון — "עולה לאוויר" רק כשהשותפות פעילה */}
       <div className="flex flex-col gap-2">
@@ -132,13 +146,21 @@ export function PartnerProgramPanel({ program }: { program: PartnerProgramView }
       </div>
 
       <div className="border-outline-variant flex flex-col gap-3 border-t pt-4">
-        <ActionSection program={program} isBrand={isBrand} />
+        <ActionSection program={program} isBrand={isBrand} paymentsEnabled={paymentsEnabled} />
       </div>
     </div>
   );
 }
 
-function ActionSection({ program, isBrand }: { program: PartnerProgramView; isBrand: boolean }) {
+function ActionSection({
+  program,
+  isBrand,
+  paymentsEnabled,
+}: {
+  program: PartnerProgramView;
+  isBrand: boolean;
+  paymentsEnabled: boolean;
+}) {
   const [fundState, fundAction, funding] = useActionState(
     fundPartnerDeposit,
     CONTRACT_ACTION_INITIAL,
@@ -184,7 +206,7 @@ function ActionSection({ program, isBrand }: { program: PartnerProgramView; isBr
         </p>
       )}
 
-      {program.status === "PENDING_DEPOSIT" && isBrand && (
+      {paymentsEnabled && program.status === "PENDING_DEPOSIT" && isBrand && (
         <form action={fundAction} className="flex flex-col gap-2">
           <input type="hidden" name="contractId" value={program.contractId} />
           <p className="text-on-surface-variant text-xs">
@@ -200,7 +222,7 @@ function ActionSection({ program, isBrand }: { program: PartnerProgramView; isBr
         </form>
       )}
 
-      {program.status === "PENDING_DEPOSIT" && !isBrand && (
+      {paymentsEnabled && program.status === "PENDING_DEPOSIT" && !isBrand && (
         <p className="text-on-surface-variant rounded-lg px-3 py-2 text-center text-xs leading-relaxed">
           הלינק והקופון יופעלו לאחר שהמפרסם יפקיד את פיקדון השותפות.
         </p>
@@ -242,11 +264,13 @@ function ActionSection({ program, isBrand }: { program: PartnerProgramView; isBr
               בחירתך נרשמה: {choiceLabel(myChoice)}.
             </p>
           )}
-          {isBrand && <div className="border-outline-variant border-t pt-3">{topUpForm}</div>}
+          {isBrand && paymentsEnabled && (
+            <div className="border-outline-variant border-t pt-3">{topUpForm}</div>
+          )}
         </div>
       )}
 
-      {program.status === "PAUSED" && isBrand && (
+      {paymentsEnabled && program.status === "PAUSED" && isBrand && (
         <div className="flex flex-col gap-2">
           <p className="text-on-surface-variant text-xs">
             השותפות מושהית. הטענת פיקדון תחזיר את הלינק והקופון לפעילות.
@@ -255,7 +279,7 @@ function ActionSection({ program, isBrand }: { program: PartnerProgramView; isBr
         </div>
       )}
 
-      {program.status === "PAUSED" && !isBrand && (
+      {paymentsEnabled && program.status === "PAUSED" && !isBrand && (
         <p className="text-on-surface-variant rounded-lg px-3 py-2 text-center text-xs leading-relaxed">
           השותפות מושהית עד שהמפרסם יטעין את הפיקדון מחדש.
         </p>
@@ -269,7 +293,7 @@ function ActionSection({ program, isBrand }: { program: PartnerProgramView; isBr
 
       {program.status === "CLOSED" && (
         <p className="text-on-surface-variant text-center text-xs leading-relaxed">
-          השותפות הסתיימה ויתרת הפיקדון הוחזרה למפרסם.
+          {paymentsEnabled ? "השותפות הסתיימה ויתרת הפיקדון הוחזרה למפרסם." : "השותפות הסתיימה."}
         </p>
       )}
     </>

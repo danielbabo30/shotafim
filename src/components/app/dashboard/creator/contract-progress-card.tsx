@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { LockIcon, CheckIcon } from "@/components/marketing/icons";
+import { arePaymentsEnabled } from "@/lib/payments-gate";
 import { CONTRACT_STEPS, formatShekels, type CreatorContractVM } from "@/lib/dashboard-creator";
 
 function ContractStepper({ step }: { step: CreatorContractVM["step"] }) {
@@ -67,10 +68,12 @@ export function ContractProgressCard({ item }: { item: CreatorContractVM }) {
             >
               {item.deadlineLabel}
             </span>
-            <span className="text-primary flex items-center gap-1 text-sm font-bold whitespace-nowrap">
-              <LockIcon className="size-3.5" />
-              {formatShekels(item.escrowAmount)} נעולים בנאמנות
-            </span>
+            {arePaymentsEnabled() && (
+              <span className="text-primary flex items-center gap-1 text-sm font-bold whitespace-nowrap">
+                <LockIcon className="size-3.5" />
+                {formatShekels(item.escrowAmount)} נעולים בנאמנות
+              </span>
+            )}
           </div>
         </div>
 

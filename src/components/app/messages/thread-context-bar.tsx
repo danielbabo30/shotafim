@@ -12,12 +12,16 @@ export function ThreadContextBar({ context }: { context: ConversationContext }) 
 
   return (
     <div className="border-outline-variant bg-surface-low flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5">
-      <span className="border-outline-variant bg-surface-lowest text-on-surface-variant inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
-        <LockIcon className="size-3.5" />
-        {typeof context.escrowAmountILS === "number"
-          ? `חוזה פעיל בנאמנות: ₪${context.escrowAmountILS.toLocaleString("en-US")}`
-          : "חוזה פעיל בנאמנות"}
-      </span>
+      {context.showEscrow !== false ? (
+        <span className="border-outline-variant bg-surface-lowest text-on-surface-variant inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
+          <LockIcon className="size-3.5" />
+          {typeof context.escrowAmountILS === "number"
+            ? `חוזה פעיל בנאמנות: ₪${context.escrowAmountILS.toLocaleString("en-US")}`
+            : "חוזה פעיל בנאמנות"}
+        </span>
+      ) : (
+        <span />
+      )}
 
       {context.workspaceHref ? (
         <Link

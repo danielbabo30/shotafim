@@ -36,7 +36,9 @@ export function RoomChat({
         <div className="min-w-0">
           <h2 className="text-on-surface truncate text-sm font-bold">{counterparty.name}</h2>
           {counterparty.handle && (
-            <p className="text-on-surface-variant text-xs">@{counterparty.handle}</p>
+            <p className="text-on-surface-variant text-xs">
+              <bdi dir="ltr">@{counterparty.handle}</bdi>
+            </p>
           )}
         </div>
       </header>

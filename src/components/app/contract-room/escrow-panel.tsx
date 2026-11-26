@@ -2,8 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { cn } from "@/lib/cn";
-import { CheckCircleIcon, LockIcon } from "@/components/marketing/icons";
+import { CheckCircleIcon, InfoIcon, LockIcon } from "@/components/marketing/icons";
 import { CONTRACT_ACTION_INITIAL, type ContractParty } from "@/lib/contract-room";
+import { POC_PAYMENT_NOTICE } from "@/lib/payments-notice";
 import { approveAndRelease, requestRevision, fundEscrow } from "@/lib/actions/contract-actions";
 
 const currency = new Intl.NumberFormat("he-IL", {
@@ -24,6 +25,7 @@ export function EscrowPanel({
   canRequestRevision,
   revisionRoundsLeft,
   released,
+  paymentsEnabled = true,
 }: {
   contractId: string;
   viewerParty: ContractParty;
@@ -34,6 +36,8 @@ export function EscrowPanel({
   canRequestRevision: boolean;
   revisionRoundsLeft: number;
   released: boolean;
+  /** false במצב POC — אין הפקדה/שחרור; מציג הודעה שהתשלום מחוץ למערכת */
+  paymentsEnabled?: boolean;
 }) {
   const [approveState, approveAction, approving] = useActionState(
     approveAndRelease,
@@ -55,13 +59,20 @@ export function EscrowPanel({
   return (
     <div className="border-outline-variant bg-surface-lowest shadow-ambient-sm flex flex-col gap-6 rounded-lg border p-6">
       {/* סכום בנאמנות */}
-      <div className="border-outline-variant bg-surface-container rounded-lg border p-4 text-center">
-        <LockIcon className="text-primary mx-auto mb-2 size-7" />
-        <p className="text-on-surface text-2xl font-bold">{currency.format(escrowAmountILS)}</p>
-        <p className="text-on-surface-variant text-sm">
-          {released ? "שוחררו ליוצר" : "נעולים בנאמנות BridgeAd"}
+      {paymentsEnabled ? (
+        <div className="border-outline-variant bg-surface-container rounded-lg border p-4 text-center">
+          <LockIcon className="text-primary mx-auto mb-2 size-7" />
+          <p className="text-on-surface text-2xl font-bold">{currency.format(escrowAmountILS)}</p>
+          <p className="text-on-surface-variant text-sm">
+            {released ? "שוחררו ליוצר" : "נעולים בנאמנות BridgeAd"}
+          </p>
+        </div>
+      ) : (
+        <p className="border-outline-variant bg-surface-container text-on-surface-variant flex items-start gap-2 rounded-lg border p-4 text-sm leading-relaxed">
+          <InfoIcon className="mt-0.5 size-4 shrink-0" />
+          {POC_PAYMENT_NOTICE}
         </p>
-      </div>
+      )}
 
       {/* אבני דרך */}
       <div className="flex flex-col gap-3">
@@ -99,16 +110,18 @@ export function EscrowPanel({
       <div className="border-outline-variant flex flex-col gap-3 border-t pt-4">
         {isProvider ? (
           <p className="text-on-surface-variant rounded-lg px-3 py-2 text-center text-xs leading-relaxed">
-            {released
-              ? "התשלום אושר ושוחרר אליך."
-              : "התקציב מוחזק בנאמנות. עם אישור המפרסם הוא ישוחרר אליך."}
+            {!paymentsEnabled
+              ? "התשלום מתבצע מחוץ למערכת."
+              : released
+                ? "התשלום אושר ושוחרר אליך."
+                : "התקציב מוחזק בנאמנות. עם אישור המפרסם הוא ישוחרר אליך."}
           </p>
         ) : released ? (
           <p className="bg-success-container text-success flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold">
             <CheckCircleIcon className="size-5" />
             התוצר אושר והתשלום שוחרר
           </p>
-        ) : canFund ? (
+        ) : canFund && paymentsEnabled ? (
           <form action={fundAction} className="flex flex-col gap-2">
             <input type="hidden" name="contractId" value={contractId} />
             <p className="text-on-surface-variant text-xs">
@@ -124,7 +137,7 @@ export function EscrowPanel({
           </form>
         ) : (
           <>
-            {confirmApprove ? (
+            {!paymentsEnabled ? null : confirmApprove ? (
               <form action={approveAction} className="flex flex-col gap-2">
                 <input type="hidden" name="contractId" value={contractId} />
                 <p className="text-on-surface-variant text-xs">
@@ -165,6 +178,7 @@ export function EscrowPanel({
                 <input type="hidden" name="contractId" value={contractId} />
                 <textarea
                   name="note"
+                  aria-label="פירוט התיקונים הנדרשים"
                   rows={3}
                   placeholder="פרט מה צריך לתקן (יתווסף כהערה ליוצר)…"
                   className="border-outline-variant bg-surface-container focus:border-primary text-on-surface w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"

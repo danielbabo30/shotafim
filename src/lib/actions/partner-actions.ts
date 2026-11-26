@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/app-user";
+import { arePaymentsEnabled, paymentsBlockedState } from "@/lib/payments-gate";
 import type { ContractActionState } from "@/lib/contract-room";
 import { FINAL_CHECKPOINT_GRACE_DAYS } from "@/lib/partner-terms";
 import { approveCommission, reverseCommission } from "@/lib/track/ingest";
@@ -31,6 +32,7 @@ export async function fundPartnerDeposit(
   _prev: ContractActionState,
   formData: FormData,
 ): Promise<ContractActionState> {
+  if (!arePaymentsEnabled()) return paymentsBlockedState();
   const user = await requireActiveUser();
   const contractId = String(formData.get("contractId") ?? "");
 
@@ -126,6 +128,7 @@ export async function topUpPartnerDeposit(
   _prev: ContractActionState,
   formData: FormData,
 ): Promise<ContractActionState> {
+  if (!arePaymentsEnabled()) return paymentsBlockedState();
   const loaded = await loadProgram(String(formData.get("contractId") ?? ""), "brand");
   if (!loaded) return { status: "error", message: "החוזה לא נמצא או אינו שייך לחשבון זה." };
   const { contract, program } = loaded;
@@ -284,6 +287,7 @@ export async function triggerPayoutCheckpoint(
   _prev: ContractActionState,
   formData: FormData,
 ): Promise<ContractActionState> {
+  if (!arePaymentsEnabled()) return paymentsBlockedState();
   const user = await requireActiveUser();
   if (!user.roleKeys.includes("admin")) {
     return { status: "error", message: "פעולה זו מיועדת לאדמין בלבד." };

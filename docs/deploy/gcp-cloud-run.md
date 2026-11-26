@@ -155,6 +155,7 @@ gcloud secrets add-iam-policy-binding AUTH_SECRET \
 | `AUTH_TRUST_HOST` | מומלץ | רגיל | `true` (אחרי proxy של Cloud Run) |
 | `PAYLOAD_SECRET` | חובה (16+) | סוד | `openssl rand -base64 33` |
 | `CRON_SECRET` | חובה בפרוד' | סוד | בלעדיו ה-cron מחזיר 503. אותו ערך ל-Cloud Scheduler |
+| `PAYMENTS_UI_ENABLED` | אופציונלי | רגיל | ברירת מחדל `true`. ב-POC (תשלום מחוץ למערכת) קבע `false`: מסתיר ומחסום בשרת הפקדה/שחרור/משיכה/חשבוניות/פיקדון. ראה `docs/spec/poc-mode-payments-flag.md` |
 | `STORAGE_DRIVER` | חובה בפרוד' | רגיל | `gcs`. ברירת מחדל `local` (דיסק זמני — הקבצים יאבדו!) |
 | `GCS_BUCKET` | חובה כש-`gcs` | רגיל | שם ה-bucket. האפליקציה נופלת בהפעלה אם חסר |
 | `TRACK_KEY_SECRET` | חובה לתוסף WooCommerce | סוד | `openssl rand -base64 32` |
