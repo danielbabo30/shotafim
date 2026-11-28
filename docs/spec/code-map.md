@@ -1,6 +1,6 @@
 # Code Map — where is what
 
-> updated: 2026-09-21 · maintained by: systems-analyst. Update on any structural change.
+> updated: 2026-09-28 · maintained by: systems-analyst. Update on any structural change.
 
 ## Skeleton
 
@@ -23,7 +23,7 @@
 - **Marketplace:** `marketplace · marketplace-query · creator-profile · my-ad-spaces · ad-spaces · ad-space-schedule · ad-space-asset-form` — see `docs/spec/marketplace.md`
 - **Contracts:** `contracts · contract-room · deliverable-upload · reviews · review-form` — contract lifecycle in `docs/spec/contracts.md`; deliverables/submissions/feedback sub-domain in `docs/spec/deliverables.md`
 - **Messaging/disputes:** `messages · disputes`
-- **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr`
+- **Partners:** `partner-program · partner-codes · partner-constants · partner-terms · partner-deposit · partner-dashboard · plugin-connection · plugin-form · qr` — click/order tracking engine detail in `docs/spec/tracking-engine.md`
 - **CMS/content:** `homepage · posts · guides · legal · legal-pages · solutions-* · how-it-works · contact · company-info · cms · site` (+ `*-defaults.ts`)
 - **Infra:** `app-user · app-nav · auth-helpers · admin-guard · prisma · payload · email · storage · cities · partner-categories-query · legal-consent · registration*`
 
@@ -33,6 +33,19 @@
 
 ## API routes (`src/app/api/`)
 `auth/[...nextauth]` · `track/{click,order,order-status,digest}` · `plugin/{heartbeat,deactivated}` · `plugin-download` · `contract-files/[attachmentId]` · `cron/{reconcile,monitor,checkpoints}`
+
+## Tracking engine — clicks, attribution, commission (see `docs/spec/tracking-engine.md`)
+`src/lib/track/{auth,crypto,commission,ingest,drain,notify,http,schemas}.ts` (engine) ·
+`src/lib/track/cron/{monitor,reconcile,checkpoints,guard}.ts` (cron bodies) ·
+`src/app/api/track/{click,order,order-status,digest}/route.ts` + `src/app/api/plugin/{heartbeat,deactivated}/route.ts`
+(HMAC-authenticated plugin webhooks — see `src/lib/track/auth.ts`) ·
+`src/app/api/cron/{monitor,reconcile}/route.ts` (Vercel-cron/bearer-secret only) ·
+`src/lib/actions/plugin-actions.ts` + `src/lib/plugin-connection.ts` (store pairing) ·
+`wp-plugin/bridgead-woo/includes/class-bridgead-{tracker,orders,api,queue,cron}.php`
+(WooCommerce-side click/order capture + HMAC signing + retry queue).
+`MaintenanceWindow` is schema-only — no `.create()` call site exists anywhere in `src/`
+(only reads in `ingest.ts`/`monitor.ts` and a dev-seed `deleteMany`); see
+`docs/spec/tracking-engine.md` §10 finding 1.
 
 ## Deliverables / submissions / feedback (contract sub-domain — see `docs/spec/deliverables.md`)
 `src/components/app/contract-room/deliverable-proofer.tsx` (submission viewer + feedback UI, all parties) ·
@@ -52,7 +65,7 @@
 - DB writes: `prisma.$transaction` · `.create(` · `.update(`
 - plugin auth: `src/lib/track/{crypto,auth}.ts` · `hmac` · `siteSecret`
 - enums: `prisma/schema.prisma` (search `enum ` + name) · manual mirror in `src/payload-types.ts`
-- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay` and `src/lib/auth-helpers.ts`'s guards are both confirmed-dead as of this pass
+- dead/unimplemented features: grep the model name in lowercase-first form (e.g. `proofOfPlay\.`) across `src/` before trusting a schema model has a real write path — `ProofOfPlay`, `MaintenanceWindow`, and `src/lib/auth-helpers.ts`'s guards are all confirmed-dead as of this pass; `OrderCommissionStatus.ON_HOLD` is a dead enum *value* (fully read/rendered downstream, no writer) rather than a dead model — see `docs/spec/tracking-engine.md` §10
 
 ## Notes from specced features
 - **`src/proxy.ts`, not `middleware.ts`.** Next.js 16 renamed Middleware to Proxy — same file convention/purpose, new filename. It's an *optimistic* cookie-presence check only (`PROTECTED_PREFIXES`: `/dashboard`, `/register/{roles,profile,complete}` — bare `/register` is deliberately excluded), not an authorization boundary; the real DB-backed check is `requireActiveUser()` in `(app)/layout.tsx` and in nearly every individual page/action. See `docs/spec/auth.md` §3/§7 and `docs/spec/rbac-guards.md` §3.
